@@ -7,21 +7,21 @@ Deployment has not been completed from this environment as of Sunday, August 23,
 Set these in `.env.local` for local work and in Vercel for production:
 
 ```bash
-NEXT_PUBLIC_APP_URL
-NEXT_PUBLIC_SUPABASE_URL
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
-NEXT_PUBLIC_SUPABASE_ANON_KEY        # optional legacy alias
-SUPABASE_SECRET_KEY
-SUPABASE_SERVICE_ROLE_KEY            # optional legacy alias
-AI_PROVIDER
-OPENAI_API_KEY                       # required only when AI_PROVIDER=openai
-OPENAI_TRANSCRIPTION_MODEL           # required only when AI_PROVIDER=openai
-OPENAI_SUMMARY_MODEL                 # required only when AI_PROVIDER=openai
-GROQ_API_KEY                         # required only when AI_PROVIDER=groq
-GROQ_BASE_URL                        # required only when AI_PROVIDER=groq
-GROQ_TRANSCRIPTION_MODEL             # required only when AI_PROVIDER=groq
-GROQ_SUMMARY_MODEL                   # required only when AI_PROVIDER=groq
-CRON_SECRET
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+NEXT_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your_supabase_publishable_key
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key                # optional legacy alias
+SUPABASE_SECRET_KEY=your_supabase_secret_key
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key            # optional legacy alias
+AI_PROVIDER=groq
+OPENAI_API_KEY=your_openai_api_key                       # required only when AI_PROVIDER=openai
+OPENAI_TRANSCRIPTION_MODEL=gpt-4o-transcribe-diarize    # required only when AI_PROVIDER=openai
+OPENAI_SUMMARY_MODEL=gpt-4.1-mini                        # required only when AI_PROVIDER=openai
+GROQ_API_KEY=your_groq_api_key                           # required only when AI_PROVIDER=groq
+GROQ_BASE_URL=https://api.groq.com/openai/v1            # required only when AI_PROVIDER=groq
+GROQ_TRANSCRIPTION_MODEL=whisper-large-v3-turbo         # required only when AI_PROVIDER=groq
+GROQ_SUMMARY_MODEL=openai/gpt-oss-20b                   # required only when AI_PROVIDER=groq
+CRON_SECRET=your_cron_secret
 ```
 
 ## Supabase setup
@@ -50,8 +50,8 @@ Local:
 
 Production:
 
-- Site URL: the real production origin
-- Redirect allowlist: `<production-origin>/auth/callback`
+- Site URL: `https://your-production-origin.example`
+- Redirect allowlist: `https://your-production-origin.example/auth/callback`
 
 ## Vercel
 
