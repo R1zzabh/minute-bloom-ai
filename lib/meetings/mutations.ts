@@ -1,38 +1,65 @@
 import { demoMeeting } from "@/fixtures/demo-meeting"
 import { hasConfiguredSupabase } from "@/lib/env"
+import { createStoragePath, sanitizeFileName } from "@/lib/utils"
 import { createAdminSupabaseClient } from "@/lib/supabase/admin"
 import { createServerSupabaseClient } from "@/lib/supabase/server"
 import { sanitizeErrorMessage } from "@/lib/supabase/utils"
-import { uploadMeetingInputSchema } from "@/lib/meetings/validators"
+import type { Database } from "@/types/database"
+import {
+  createMeetingRequestSchema,
+  updateActionItemSchema,
+  uploadMeetingInputSchema,
+} from "@/lib/meetings/validators"
 
 const bucketName = "meeting-audio"
 
 export async function createMeetingRecord(
   userId: string,
-  input: Parameters<typeof uploadMeetingInputSchema.parse>[0]
+  input: Parameters<typeof createMeetingRequestSchema.parse>[0]
 ) {
-  const validated = uploadMeetingInputSchema.parse(input)
+  const validated = createMeetingRequestSchema.parse(input)
+  const meetingId = crypto.randomUUID()
+  const storagePath = createStoragePath(
+    userId,
+    meetingId,
+    sanitizeFileName(validated.originalFileName)
+  )
+  const title =
+    validated.title?.trim() ||
+    validated.originalFileName.replace(/\.[^.]+$/, "").slice(0, 160)
+
+  const record = uploadMeetingInputSchema.parse({
+    ...validated,
+    title,
+    description: validated.description ?? null,
+    storagePath,
+  })
 
   if (!hasConfiguredSupabase()) {
-    return demoMeeting
+    return {
+      id: demoMeeting.id,
+      storagePath: demoMeeting.storagePath,
+      status: demoMeeting.status,
+    }
   }
 
   const supabase = await createServerSupabaseClient()
   const { data, error } = await supabase
     .from("meetings")
     .insert({
+      id: meetingId,
       user_id: userId,
-      title: validated.title,
-      description: validated.description,
-      language: validated.language,
-      original_file_name: validated.originalFileName,
-      storage_path: validated.storagePath,
-      mime_type: validated.mimeType,
-      size_bytes: validated.sizeBytes,
+      title: record.title,
+      description: record.description,
+      language: record.language,
+      original_file_name: record.originalFileName,
+      storage_path: record.storagePath,
+      mime_type: record.mimeType,
+      size_bytes: record.sizeBytes,
       status: "uploading",
       progress: 0,
     })
-    .select("id")
+    .select("id, storage_path, status")
     .single()
 
   if (error || !data) {
@@ -75,6 +102,70 @@ export async function deleteMeetingForUser(meetingId: string, userId: string) {
   if (deleteError) {
     throw new Error("Unable to delete meeting row.")
   }
+}
+
+export async function updateMeetingForUser(
+  meetingId: string,
+  userId: string,
+  input: Database["public"]["Tables"]["meetings"]["Update"]
+) {
+  if (!hasConfiguredSupabase()) {
+    return demoMeeting
+  }
+
+  const supabase = await createServerSupabaseClient()
+  const payload = input
+
+  const { data, error } = await supabase
+    .from("meetings")
+    .update(payload)
+    .eq("id", meetingId)
+    .eq("user_id", userId)
+    .select("id")
+    .maybeSingle()
+
+  if (error) {
+    throw new Error("Unable to update meeting.")
+  }
+
+  return data
+}
+
+export async function updateActionItemForUser(
+  meetingId: string,
+  actionItemId: string,
+  userId: string,
+  input: Parameters<typeof updateActionItemSchema.parse>[0]
+) {
+  const validated = updateActionItemSchema.parse(input)
+
+  if (!hasConfiguredSupabase()) {
+    return (
+      demoMeeting.actionItems.find((item) => item.id === actionItemId) ?? null
+    )
+  }
+
+  const supabase = await createServerSupabaseClient()
+  const { data, error } = await supabase
+    .from("action_items")
+    .update({
+      task: validated.task,
+      owner: validated.owner,
+      due_date: validated.dueDate,
+      priority: validated.priority,
+      status: validated.status,
+    })
+    .eq("id", actionItemId)
+    .eq("meeting_id", meetingId)
+    .eq("user_id", userId)
+    .select("id")
+    .maybeSingle()
+
+  if (error) {
+    throw new Error("Unable to update action item.")
+  }
+
+  return data
 }
 
 export function toSafeProcessingError(error: unknown) {

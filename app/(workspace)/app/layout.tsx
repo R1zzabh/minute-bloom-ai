@@ -2,8 +2,11 @@ import Link from "next/link"
 import { Home, PlusCircle, Settings2 } from "lucide-react"
 
 import { Logo } from "@/components/shared/logo"
+import { SignOutButton } from "@/components/shared/sign-out-button"
 import { ThemeToggle } from "@/components/shared/theme-toggle"
 import { buttonVariants } from "@/components/ui/button"
+import { hasConfiguredSupabase } from "@/lib/env"
+import { getAuthenticatedUser } from "@/lib/supabase/server"
 
 const navItems = [
   { href: "/app", label: "Dashboard", icon: Home },
@@ -11,18 +14,32 @@ const navItems = [
   { href: "/app/settings", label: "Settings", icon: Settings2 },
 ]
 
-export default function WorkspaceLayout({
+export default async function WorkspaceLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const user = hasConfiguredSupabase() ? await getAuthenticatedUser() : null
+
   return (
     <div className="min-h-screen">
       <div className="grid min-h-screen lg:grid-cols-[280px_1fr]">
         <aside className="border-b-2 border-border bg-card/60 lg:border-r-2 lg:border-b-0">
           <div className="flex items-center justify-between gap-4 px-4 py-5 sm:px-6 lg:flex-col lg:items-start lg:px-5">
-            <Logo />
-            <ThemeToggle />
+            <div className="space-y-3">
+              <Logo />
+              <p className="text-sm text-muted-foreground">
+                {user?.email ?? "Fixture mode"}
+              </p>
+            </div>
+            <div className="flex items-center gap-2 lg:w-full lg:justify-between">
+              <ThemeToggle />
+              {user ? (
+                <SignOutButton variant="secondary" size="sm">
+                  Sign out
+                </SignOutButton>
+              ) : null}
+            </div>
           </div>
           <nav className="grid gap-2 px-4 pb-5 sm:px-6 lg:px-5">
             {navItems.map((item) => (

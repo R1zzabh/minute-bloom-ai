@@ -1,6 +1,12 @@
+import { SignOutButton } from "@/components/shared/sign-out-button"
+import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
+import { hasConfiguredOpenAI, hasConfiguredSupabase } from "@/lib/env"
+import { getAuthenticatedUser } from "@/lib/supabase/server"
 
-export default function SettingsPage() {
+export default async function SettingsPage() {
+  const user = hasConfiguredSupabase() ? await getAuthenticatedUser() : null
+
   return (
     <div className="content-width space-y-6">
       <div>
@@ -13,9 +19,14 @@ export default function SettingsPage() {
         <Card>
           <h2 className="text-lg font-semibold">Profile</h2>
           <p className="mt-3 text-sm leading-7 text-muted-foreground">
-            Email identity, redirect handling, and sign-out controls are
-            connected in the auth milestone.
+            {user?.email ??
+              "Supabase auth is not configured in this environment."}
           </p>
+          {user ? (
+            <SignOutButton className="mt-4" variant="secondary">
+              Sign out
+            </SignOutButton>
+          ) : null}
         </Card>
         <Card>
           <h2 className="text-lg font-semibold">Theme</h2>
@@ -25,10 +36,18 @@ export default function SettingsPage() {
           </p>
         </Card>
         <Card>
-          <h2 className="text-lg font-semibold">Data controls</h2>
-          <p className="mt-3 text-sm leading-7 text-muted-foreground">
-            Meeting deletion, storage cleanup, and ownership protections are
-            implemented alongside the data layer.
+          <h2 className="text-lg font-semibold">Environment</h2>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Badge variant={hasConfiguredSupabase() ? "primary" : "accent"}>
+              Supabase {hasConfiguredSupabase() ? "ready" : "missing"}
+            </Badge>
+            <Badge variant={hasConfiguredOpenAI() ? "primary" : "accent"}>
+              OpenAI {hasConfiguredOpenAI() ? "ready" : "missing"}
+            </Badge>
+          </div>
+          <p className="mt-4 text-sm leading-7 text-muted-foreground">
+            Meeting deletion removes both the database row and the private audio
+            object when live credentials are configured.
           </p>
         </Card>
       </div>

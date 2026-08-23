@@ -8,7 +8,12 @@ export default function DemoPage() {
       <SiteHeader />
       <main className="section-padding">
         <div className="content-width">
-          <MeetingWorkspace meeting={demoMeeting} isDemo />
+          <MeetingWorkspace
+            key={`${demoMeeting.id}:${demoMeeting.updatedAt}`}
+            meeting={demoMeeting}
+            initialAudioUrl="/api/demo-audio"
+            mode="demo"
+          />
         </div>
       </main>
     </div>

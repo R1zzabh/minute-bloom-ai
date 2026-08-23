@@ -7,13 +7,30 @@ import {
 } from "@/lib/constants"
 import type { MeetingStatus } from "@/types/meeting"
 
-export const uploadMeetingInputSchema = z.object({
-  title: z.string().trim().min(1).max(160),
-  description: z.string().trim().max(600).nullable(),
+export const meetingStatusSchema = z.enum([
+  "uploading",
+  "uploaded",
+  "transcribing",
+  "summarizing",
+  "completed",
+  "failed",
+])
+
+export const actionItemPrioritySchema = z.enum(["low", "medium", "high"])
+export const actionItemStatusSchema = z.enum(["open", "in_progress", "done"])
+
+export const createMeetingRequestSchema = z.object({
+  title: z.string().trim().max(160).optional(),
+  description: z.string().trim().max(600).nullish(),
   language: z.string().trim().min(1).max(24).default("auto"),
   originalFileName: z.string().trim().min(1).max(255),
   mimeType: z.string().trim().min(1),
   sizeBytes: z.number().int().positive().max(MAX_AUDIO_FILE_SIZE_BYTES),
+})
+
+export const uploadMeetingInputSchema = createMeetingRequestSchema.extend({
+  title: z.string().trim().min(1).max(160),
+  description: z.string().trim().max(600).nullable(),
   storagePath: z.string().trim().min(1),
 })
 
@@ -22,6 +39,31 @@ export const chatRequestSchema = z.object({
 })
 
 export const exportFormatSchema = z.enum(["markdown", "text", "json"])
+
+export const updateMeetingSchema = z
+  .object({
+    title: z.string().trim().min(1).max(160).optional(),
+    description: z.string().trim().max(600).nullable().optional(),
+    language: z.string().trim().min(1).max(24).optional(),
+    status: meetingStatusSchema.optional(),
+    progress: z.number().int().min(0).max(100).optional(),
+    processingError: z.string().trim().max(240).nullable().optional(),
+  })
+  .refine((value) => Object.keys(value).length > 0, {
+    message: "At least one meeting field must be updated.",
+  })
+
+export const updateActionItemSchema = z
+  .object({
+    task: z.string().trim().min(1).max(240).optional(),
+    owner: z.string().trim().max(120).nullable().optional(),
+    dueDate: z.string().date().nullable().optional(),
+    priority: actionItemPrioritySchema.optional(),
+    status: actionItemStatusSchema.optional(),
+  })
+  .refine((value) => Object.keys(value).length > 0, {
+    message: "At least one action item field must be updated.",
+  })
 
 export function validateAudioFile(file: {
   name: string

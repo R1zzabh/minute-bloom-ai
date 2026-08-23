@@ -17,10 +17,10 @@ Add the captured landing and workspace screenshots here after the Playwright/bro
 
 ## Requirements mapping
 
-- Audio input: upload flow is scaffolded under `/app/meetings/new`
+- Audio input: authenticated upload flow lives under `/app/meetings/new`
 - Transcript output: OpenAI transcription pipeline lives in `lib/ai/transcribe.ts`
 - Summary and action items: structured summary pipeline lives in `lib/ai/summarize.ts`
-- Frontend for upload and results: landing page, dashboard shell, demo workspace, and meeting workspace routes are implemented
+- Frontend for upload and results: landing page, dashboard, upload flow, demo workspace, and meeting workspace routes are implemented
 - Backend storage and processing: Supabase schema, helpers, proxy auth gate, and meeting API routes are implemented
 - ASR and LLM integration: current OpenAI SDK surfaces are used for transcription and Responses API structured outputs
 - GitHub-ready repo docs: this README plus `docs/`
@@ -120,6 +120,12 @@ npm run build
 ## API routes
 
 - `GET /api/health`
+- `GET /api/demo-audio`
+- `POST /api/meetings`
+- `GET /api/meetings/[id]`
+- `PATCH /api/meetings/[id]`
+- `DELETE /api/meetings/[id]`
+- `PATCH /api/meetings/[id]/action-items/[actionItemId]`
 - `POST /api/meetings/[id]/process`
 - `POST /api/meetings/[id]/chat`
 - `POST /api/meetings/[id]/retry`
@@ -136,7 +142,7 @@ npm run build
 ## Limitations
 
 - The MVP enforces a hard 25 MB upload cap.
-- The browser upload and sign-in shells are present, but end-to-end verification against a live Supabase project is still pending environment credentials.
+- Live sign-in, upload, and workspace mutations are implemented, but end-to-end verification against a live Supabase and OpenAI stack is still pending environment credentials.
 - Playwright browser execution is blocked in this environment by missing system libraries for Chromium, including `libnspr4.so`.
 - GitHub, Supabase, and Vercel deployment steps are blocked here by missing local tooling and external account access.
 
