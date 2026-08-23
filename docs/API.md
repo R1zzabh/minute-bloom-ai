@@ -2,31 +2,88 @@
 
 ## `GET /api/health`
 
-Returns a minimal dependency-independent status payload.
+- Public
+- Returns a timestamp plus safe readiness booleans
+- Does not expose secret values
+
+## `POST /api/meetings`
+
+- Auth required
+- Same-origin required
+- Full live-processing configuration required
+- Shared rate-limited
+- Creates a real meeting row for the authenticated user
+
+## `GET /api/meetings/[id]`
+
+- Auth required
+- Returns the owned meeting plus a signed audio URL when available
+
+## `PATCH /api/meetings/[id]`
+
+- Auth required
+- Same-origin required
+- Supabase admin configuration required for shared rate limiting
+- Shared rate-limited
+- Only updates user-editable meeting metadata:
+  - `title`
+  - `description`
+  - `language`
+
+## `DELETE /api/meetings/[id]`
+
+- Auth required
+- Same-origin required
+- Supabase admin configuration required for shared rate limiting
+- Shared rate-limited
+- Deletes the private storage object first
+- Deletes the meeting row only after storage cleanup succeeds or the object is already absent
+
+## `POST /api/meetings/[id]/upload-complete`
+
+- Auth required
+- Same-origin required
+- Full live-processing configuration required
+- Shared rate-limited
+- Verifies the owned storage object exists before marking the meeting `uploaded`
 
 ## `POST /api/meetings/[id]/process`
 
 - Auth required
-- Verifies meeting ownership
-- Downloads private audio
-- Runs transcription and structured summary generation
-- Persists transcript, summary, and action items
-
-## `POST /api/meetings/[id]/chat`
-
-- Auth required
-- Request body: `{ "question": string }`
-- Rate-limited per user
-- Returns a grounded answer plus timestamp citations when available
+- Same-origin required
+- Shared rate-limited
+- Queues work and returns `202`
+- Does not wait for transcription or summarization to finish
 
 ## `POST /api/meetings/[id]/retry`
 
 - Auth required
-- Only valid for meetings in `failed`
-- Requeues processing, reusing the saved transcript when possible
+- Same-origin required
+- Shared rate-limited
+- Only valid when the meeting is `failed`
+- Resets queue attempt state and requeues safely
 
-## `GET /api/meetings/[id]/export`
+## `POST /api/meetings/[id]/chat`
 
 - Auth required
-- Query param: `format=markdown|text|json`
-- Returns a downloadable export
+- Same-origin required
+- Shared rate-limited
+- Returns a grounded answer plus timestamp citations when supported
+
+## `PATCH /api/meetings/[id]/action-items/[actionItemId]`
+
+- Auth required
+- Same-origin required
+- Supabase admin configuration required for shared rate limiting
+- Shared rate-limited
+- Updates only the owned action item
+
+## `GET /api/meetings/[id]/export?format=markdown|text|json`
+
+- Auth required
+- Returns a downloadable export using the shared export builders
+
+## `GET /api/internal/meeting-processing`
+
+- Secret-protected with `Authorization: Bearer <CRON_SECRET>`
+- Used by both best-effort immediate triggers and Vercel cron recovery
