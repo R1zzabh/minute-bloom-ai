@@ -55,8 +55,10 @@ function UploadStep({
 
 export function MeetingUploadForm({
   liveUploadsEnabled,
+  availabilityMessage,
 }: {
   liveUploadsEnabled: boolean
+  availabilityMessage: string
 }) {
   const router = useRouter()
   const [file, setFile] = useState<File | null>(null)
@@ -195,15 +197,7 @@ export function MeetingUploadForm({
     }
 
     if (!liveUploadsEnabled) {
-      setPending(true)
-      setProgress(100)
-      setActiveStep("Summarizing")
-      toast.message(
-        "Fixture mode is active. Connect Supabase and OpenAI to enable live uploads."
-      )
-      window.setTimeout(() => {
-        router.push("/app/meetings/demo-meeting")
-      }, 600)
+      toast.error(availabilityMessage)
       return
     }
 
@@ -248,16 +242,12 @@ export function MeetingUploadForm({
 
       setActiveStep("Uploaded")
 
-      const updateResponse = await fetch(`/api/meetings/${meetingId}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          status: "uploaded",
-          progress: 25,
-        }),
-      })
+      const updateResponse = await fetch(
+        `/api/meetings/${meetingId}/upload-complete`,
+        {
+          method: "POST",
+        }
+      )
 
       if (!updateResponse.ok) {
         const updatePayload = (await updateResponse.json()) as {
@@ -290,20 +280,6 @@ export function MeetingUploadForm({
       router.push(`/app/meetings/${meetingId}`)
       router.refresh()
     } catch (error) {
-      if (meetingId) {
-        await fetch(`/api/meetings/${meetingId}`, {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            status: "failed",
-            processingError:
-              error instanceof Error ? error.message : "Upload failed.",
-          }),
-        })
-      }
-
       toast.error(error instanceof Error ? error.message : "Upload failed.")
       setProgress(0)
     } finally {
@@ -319,6 +295,11 @@ export function MeetingUploadForm({
         <p className="mt-2 text-sm text-muted-foreground">
           Supports mp3, mp4, mpeg, mpga, m4a, wav, and webm up to 25 MB.
         </p>
+        {!liveUploadsEnabled ? (
+          <div className="mx-auto mt-4 max-w-2xl rounded-lg border-2 border-border bg-accent/20 px-4 py-4 text-left text-sm text-muted-foreground">
+            {availabilityMessage}
+          </div>
+        ) : null}
         <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
           <label className="inline-flex cursor-pointer">
             <input

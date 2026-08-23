@@ -21,7 +21,11 @@ import { Input } from "@/components/ui/input"
 import type { MeetingActionItem, MeetingRecord } from "@/types/meeting"
 import { appConfig } from "@/lib/config"
 import { ACTIVE_MEETING_STATUSES } from "@/lib/constants"
-import { buildMeetingMarkdownExport } from "@/lib/meetings/export"
+import {
+  buildMeetingJsonExport,
+  buildMeetingMarkdownExport,
+  buildMeetingTextExport,
+} from "@/lib/meetings/export"
 import {
   cn,
   formatBytes,
@@ -32,7 +36,7 @@ import {
 
 const tabs = ["Overview", "Transcript", "Action Items", "Ask AI"] as const
 
-type WorkspaceMode = "live" | "fixture" | "demo"
+type WorkspaceMode = "live" | "demo"
 
 function buildDemoAnswer(question: string) {
   const normalized = question.toLowerCase()
@@ -228,15 +232,6 @@ export function MeetingWorkspace({
       return
     }
 
-    if (mode === "fixture") {
-      setMeetingState((current) => ({
-        ...current,
-        actionItems: draftActionItems,
-      }))
-      toast.success("Saved in fixture mode.")
-      return
-    }
-
     setSavingActionId(item.id)
 
     try {
@@ -298,13 +293,21 @@ export function MeetingWorkspace({
   }
 
   async function handleExport(format: "markdown" | "text" | "json") {
+    const fallbackExport =
+      format === "json"
+        ? buildMeetingJsonExport(meetingState)
+        : format === "text"
+          ? buildMeetingTextExport(meetingState)
+          : buildMeetingMarkdownExport(meetingState)
+    const mimeType =
+      format === "json"
+        ? "application/json"
+        : format === "text"
+          ? "text/plain;charset=utf-8"
+          : "text/markdown;charset=utf-8"
     const url = isLive
       ? `/api/meetings/${meetingState.id}/export?format=${format}`
-      : `data:text/plain;charset=utf-8,${encodeURIComponent(
-          format === "json"
-            ? JSON.stringify(meetingState, null, 2)
-            : buildMeetingMarkdownExport(meetingState)
-        )}`
+      : `data:${mimeType},${encodeURIComponent(fallbackExport)}`
 
     const anchor = document.createElement("a")
     anchor.href = url
@@ -373,25 +376,6 @@ export function MeetingWorkspace({
       return
     }
 
-    if (mode === "fixture") {
-      setRetryPending(true)
-      setMeetingState((current) => ({
-        ...current,
-        status: "transcribing",
-        progress: 35,
-        processingError: null,
-      }))
-      window.setTimeout(() => {
-        setMeetingState((current) => ({
-          ...current,
-          status: "completed",
-          progress: 100,
-        }))
-        setRetryPending(false)
-      }, 1_200)
-      return
-    }
-
     setRetryPending(true)
 
     try {
@@ -421,11 +405,6 @@ export function MeetingWorkspace({
     }
 
     if (!window.confirm("Delete this meeting and its private audio file?")) {
-      return
-    }
-
-    if (mode === "fixture") {
-      router.push("/app")
       return
     }
 
@@ -463,15 +442,6 @@ export function MeetingWorkspace({
           </p>
         </Card>
       ) : null}
-      {mode === "fixture" ? (
-        <Card className="border-secondary bg-secondary/35 py-4">
-          <p className="text-sm">
-            Local fixture mode is active because live Supabase/OpenAI
-            credentials are not configured in this environment.
-          </p>
-        </Card>
-      ) : null}
-
       <div className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
         <Card className="space-y-4">
           <div className="flex flex-wrap items-start justify-between gap-4">

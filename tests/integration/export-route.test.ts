@@ -1,5 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 
+vi.mock("@/lib/env", () => ({
+  getRuntimeConfiguration: vi.fn(() => ({
+    supabaseClientConfigured: true,
+  })),
+}))
+
 vi.mock("@/lib/supabase/server", () => ({
   getAuthenticatedUser: vi.fn(),
 }))

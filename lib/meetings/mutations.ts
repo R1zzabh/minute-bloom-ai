@@ -1,4 +1,3 @@
-import { demoMeeting } from "@/fixtures/demo-meeting"
 import { hasConfiguredSupabase } from "@/lib/env"
 import { createStoragePath, sanitizeFileName } from "@/lib/utils"
 import { createAdminSupabaseClient } from "@/lib/supabase/admin"
@@ -36,11 +35,7 @@ export async function createMeetingRecord(
   })
 
   if (!hasConfiguredSupabase()) {
-    return {
-      id: demoMeeting.id,
-      storagePath: demoMeeting.storagePath,
-      status: demoMeeting.status,
-    }
+    throw new Error("Supabase is not configured for the live workspace.")
   }
 
   const supabase = await createServerSupabaseClient()
@@ -71,7 +66,7 @@ export async function createMeetingRecord(
 
 export async function deleteMeetingForUser(meetingId: string, userId: string) {
   if (!hasConfiguredSupabase()) {
-    return
+    throw new Error("Supabase is not configured for the live workspace.")
   }
 
   const supabase = await createServerSupabaseClient()
@@ -91,7 +86,17 @@ export async function deleteMeetingForUser(meetingId: string, userId: string) {
     return
   }
 
-  await admin.storage.from(bucketName).remove([data.storage_path])
+  const { error: storageError } = await admin.storage
+    .from(bucketName)
+    .remove([data.storage_path])
+
+  if (
+    storageError &&
+    !storageError.message.toLowerCase().includes("not found") &&
+    !storageError.message.toLowerCase().includes("no such object")
+  ) {
+    throw new Error("Unable to delete the private audio object.")
+  }
 
   const { error: deleteError } = await supabase
     .from("meetings")
@@ -110,7 +115,7 @@ export async function updateMeetingForUser(
   input: Database["public"]["Tables"]["meetings"]["Update"]
 ) {
   if (!hasConfiguredSupabase()) {
-    return demoMeeting
+    throw new Error("Supabase is not configured for the live workspace.")
   }
 
   const supabase = await createServerSupabaseClient()
@@ -140,9 +145,7 @@ export async function updateActionItemForUser(
   const validated = updateActionItemSchema.parse(input)
 
   if (!hasConfiguredSupabase()) {
-    return (
-      demoMeeting.actionItems.find((item) => item.id === actionItemId) ?? null
-    )
+    throw new Error("Supabase is not configured for the live workspace.")
   }
 
   const supabase = await createServerSupabaseClient()

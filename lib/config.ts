@@ -1,3 +1,7 @@
+const canonicalAppUrl =
+  process.env.NEXT_PUBLIC_APP_URL?.trim().replace(/\/$/, "") ||
+  "http://localhost:3000"
+
 export const appConfig = {
   name: "MinuteBloom",
   tagline: "Meetings end. Momentum starts.",
@@ -5,9 +9,8 @@ export const appConfig = {
     "Upload a meeting recording and leave with a timestamped transcript, clear decisions, and action items your team can actually use.",
   repositoryTarget: "R1zzabh/minute-bloom-ai",
   externalUrls: {
-    production: "https://minute-bloom.vercel.app",
+    production: canonicalAppUrl,
     github: "https://github.com/R1zzabh/minute-bloom-ai",
-    reference: "https://www.parakeet-ai.com/",
   },
   navigation: [
     { label: "Features", href: "#features" },

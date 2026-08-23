@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr"
 import { NextResponse, type NextRequest } from "next/server"
 
-import { hasConfiguredSupabase, getPublicEnv } from "@/lib/env"
+import { getPublicEnv, getRuntimeConfiguration } from "@/lib/env"
 import type { Database } from "@/types/database"
 
 const publicPaths = ["/", "/sign-in", "/demo", "/api/health"]
@@ -15,7 +15,9 @@ function isPublicPath(pathname: string) {
 }
 
 export async function updateSession(request: NextRequest) {
-  if (!hasConfiguredSupabase()) {
+  const runtime = getRuntimeConfiguration()
+
+  if (!runtime.supabaseClientConfigured) {
     return NextResponse.next({ request })
   }
 
@@ -24,7 +26,7 @@ export async function updateSession(request: NextRequest) {
 
   const supabase = createServerClient<Database>(
     env.NEXT_PUBLIC_SUPABASE_URL!,
-    env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    env.supabasePublicKey!,
     {
       cookies: {
         getAll() {

@@ -1,8 +1,8 @@
 import { notFound, redirect } from "next/navigation"
 
 import { MeetingWorkspace } from "@/components/meetings/meeting-workspace"
-import { demoMeeting } from "@/fixtures/demo-meeting"
-import { hasConfiguredSupabase } from "@/lib/env"
+import { ConfigurationRequiredState } from "@/components/shared/configuration-required-state"
+import { getRuntimeConfiguration } from "@/lib/env"
 import { getMeetingForUser } from "@/lib/meetings/queries"
 import { getAuthenticatedUser } from "@/lib/supabase/server"
 
@@ -12,18 +12,25 @@ export default async function MeetingDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const hasSupabase = hasConfiguredSupabase()
-  const user = hasSupabase ? await getAuthenticatedUser() : null
+  const runtime = getRuntimeConfiguration()
 
-  if (hasSupabase && !user) {
+  if (!runtime.supabaseClientConfigured) {
+    return (
+      <ConfigurationRequiredState
+        title="The live meeting workspace is unavailable"
+        message="The /app workspace never substitutes fixture meetings. Configure Supabase to open private meeting workspaces here, or use /demo for deterministic sample data."
+        missing={runtime.missing.supabaseClient}
+      />
+    )
+  }
+
+  const user = await getAuthenticatedUser()
+
+  if (!user) {
     redirect("/sign-in")
   }
 
-  const meeting = user
-    ? await getMeetingForUser(id, user.id)
-    : id === demoMeeting.id
-      ? demoMeeting
-      : null
+  const meeting = await getMeetingForUser(id, user.id)
 
   if (!meeting) {
     notFound()
@@ -34,8 +41,8 @@ export default async function MeetingDetailPage({
       <MeetingWorkspace
         key={`${meeting.id}:${meeting.updatedAt}`}
         meeting={meeting}
-        initialAudioUrl={hasSupabase ? null : "/api/demo-audio"}
-        mode={hasSupabase ? "live" : "fixture"}
+        initialAudioUrl={null}
+        mode="live"
       />
     </div>
   )

@@ -1,6 +1,5 @@
 import { z } from "zod"
 
-import { demoMeeting } from "@/fixtures/demo-meeting"
 import { hasConfiguredSupabase } from "@/lib/env"
 import { createServerSupabaseClient } from "@/lib/supabase/server"
 import type { MeetingRecord, MeetingSummary } from "@/types/meeting"
@@ -79,7 +78,7 @@ function mapMeetingRow(row: z.infer<typeof meetingRowSchema>): MeetingRecord {
 
 export async function listMeetingsForUser(userId: string) {
   if (!hasConfiguredSupabase()) {
-    return [demoMeeting]
+    return []
   }
 
   const supabase = await createServerSupabaseClient()
@@ -98,7 +97,7 @@ export async function listMeetingsForUser(userId: string) {
 
 export async function getMeetingForUser(meetingId: string, userId: string) {
   if (!hasConfiguredSupabase()) {
-    return meetingId === demoMeeting.id ? demoMeeting : null
+    return null
   }
 
   const supabase = await createServerSupabaseClient()

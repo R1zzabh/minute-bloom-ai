@@ -5,7 +5,7 @@ import { Logo } from "@/components/shared/logo"
 import { SignOutButton } from "@/components/shared/sign-out-button"
 import { ThemeToggle } from "@/components/shared/theme-toggle"
 import { buttonVariants } from "@/components/ui/button"
-import { hasConfiguredSupabase } from "@/lib/env"
+import { getRuntimeConfiguration } from "@/lib/env"
 import { getAuthenticatedUser } from "@/lib/supabase/server"
 
 const navItems = [
@@ -19,7 +19,10 @@ export default async function WorkspaceLayout({
 }: {
   children: React.ReactNode
 }) {
-  const user = hasConfiguredSupabase() ? await getAuthenticatedUser() : null
+  const runtime = getRuntimeConfiguration()
+  const user = runtime.supabaseClientConfigured
+    ? await getAuthenticatedUser()
+    : null
 
   return (
     <div className="min-h-screen">
@@ -29,7 +32,10 @@ export default async function WorkspaceLayout({
             <div className="space-y-3">
               <Logo />
               <p className="text-sm text-muted-foreground">
-                {user?.email ?? "Fixture mode"}
+                {user?.email ??
+                  (runtime.supabaseClientConfigured
+                    ? "Sign in to open the live workspace"
+                    : "Configuration required")}
               </p>
             </div>
             <div className="flex items-center gap-2 lg:w-full lg:justify-between">

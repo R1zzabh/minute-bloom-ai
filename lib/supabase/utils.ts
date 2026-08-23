@@ -1,9 +1,27 @@
 export function sanitizeErrorMessage(error: unknown) {
   if (error instanceof Error) {
-    return error.message
-      .replaceAll(process.env.OPENAI_API_KEY ?? "", "[redacted]")
-      .replaceAll(process.env.SUPABASE_SERVICE_ROLE_KEY ?? "", "[redacted]")
-      .slice(0, 240)
+    let sanitized = error.message
+    const secrets = [
+      process.env.OPENAI_API_KEY,
+      process.env.SUPABASE_SECRET_KEY,
+      process.env.SUPABASE_SERVICE_ROLE_KEY,
+      process.env.CRON_SECRET,
+    ]
+      .map((value) => value?.trim())
+      .filter((value): value is string => Boolean(value))
+
+    for (const secret of secrets) {
+      sanitized = sanitized.replaceAll(secret, "[redacted]")
+    }
+
+    sanitized = sanitized
+      .replace(/[\u0000-\u001f\u007f]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+
+    return sanitized.length > 0
+      ? sanitized.slice(0, 240)
+      : "Unexpected processing error."
   }
 
   return "Unexpected processing error."

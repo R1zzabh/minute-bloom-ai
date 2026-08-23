@@ -12,13 +12,13 @@ export function createAdminSupabaseClient() {
 
   const env = getServerEnv()
 
-  if (!env.NEXT_PUBLIC_SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
+  if (!env.NEXT_PUBLIC_SUPABASE_URL || !env.supabaseServerKey) {
     throw new Error("Supabase admin environment variables are not configured.")
   }
 
   adminClient = createClient<Database>(
     env.NEXT_PUBLIC_SUPABASE_URL,
-    env.SUPABASE_SERVICE_ROLE_KEY,
+    env.supabaseServerKey,
     {
       auth: {
         autoRefreshToken: false,

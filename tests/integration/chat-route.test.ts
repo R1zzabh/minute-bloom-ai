@@ -1,11 +1,26 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 
+vi.mock("@/lib/env", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/env")>()
+  return {
+    ...actual,
+    getMissingConfigurationMessage: vi.fn(() => null),
+    getRuntimeConfiguration: vi.fn(() => ({
+      liveProcessingConfigured: true,
+    })),
+  }
+})
+
 vi.mock("@/lib/supabase/server", () => ({
   getAuthenticatedUser: vi.fn(),
 }))
 
 vi.mock("@/lib/meetings/queries", () => ({
   getMeetingForUser: vi.fn(),
+}))
+
+vi.mock("@/lib/meetings/rate-limit", () => ({
+  takeRateLimitToken: vi.fn(async () => true),
 }))
 
 vi.mock("@/lib/ai/summarize", () => ({
@@ -29,6 +44,9 @@ describe("chat route", () => {
     const response = await POST(
       new Request("http://localhost/api/meetings/demo-meeting/chat", {
         method: "POST",
+        headers: {
+          origin: "http://localhost",
+        },
         body: JSON.stringify({ question: "What happened?" }),
       }),
       { params: Promise.resolve({ id: "demo-meeting" }) }
@@ -50,6 +68,9 @@ describe("chat route", () => {
     const response = await POST(
       new Request("http://localhost/api/meetings/demo-meeting/chat", {
         method: "POST",
+        headers: {
+          origin: "http://localhost",
+        },
         body: JSON.stringify({ question: "What did they decide about scope?" }),
       }),
       { params: Promise.resolve({ id: "demo-meeting" }) }

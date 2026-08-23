@@ -13,13 +13,13 @@ export function createBrowserSupabaseClient() {
 
   const env = getPublicEnv()
 
-  if (!env.NEXT_PUBLIC_SUPABASE_URL || !env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+  if (!env.NEXT_PUBLIC_SUPABASE_URL || !env.supabasePublicKey) {
     throw new Error("Supabase public environment variables are not configured.")
   }
 
   browserClient = createBrowserClient<Database>(
     env.NEXT_PUBLIC_SUPABASE_URL,
-    env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    env.supabasePublicKey
   )
 
   return browserClient

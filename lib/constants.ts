@@ -29,3 +29,9 @@ export const ACTIVE_MEETING_STATUSES = [
 ] as const
 
 export const TERMINAL_MEETING_STATUSES = ["completed", "failed"] as const
+
+export const PROCESSING_JOB_MAX_ATTEMPTS = 5
+export const PROCESSING_JOB_LEASE_SECONDS = 300
+export const PROCESSING_RETRY_BACKOFF_SECONDS = [
+  60, 300, 900, 1800, 3600,
+] as const

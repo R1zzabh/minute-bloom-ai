@@ -5,7 +5,7 @@ import type {
   TranscriptionVerbose,
 } from "openai/resources/audio/transcriptions"
 
-import { getOpenAIClient, getTranscriptionModel } from "@/lib/ai/openai"
+import { getTranscriptionModel, runOpenAIRequest } from "@/lib/ai/openai"
 import { transcriptSegmentSchema } from "@/lib/ai/schemas"
 import type { TranscriptSegment } from "@/types/meeting"
 
@@ -79,25 +79,36 @@ export async function transcribeMeetingAudio(input: {
   language: string
 }) {
   const model = getTranscriptionModel()
-  const client = getOpenAIClient()
   const file = await toFile(Buffer.from(input.audioBuffer), input.fileName, {
     type: input.mimeType,
   })
 
-  const response = await client.audio.transcriptions.create({
-    file,
-    model,
-    language: input.language !== "auto" ? input.language : undefined,
-    response_format:
-      model === "gpt-4o-transcribe-diarize" ? "diarized_json" : "verbose_json",
-    chunking_strategy:
-      model === "gpt-4o-transcribe-diarize" ? "auto" : undefined,
-    timestamp_granularities:
-      model === "gpt-4o-transcribe-diarize" ? undefined : ["segment"],
-  })
+  const response = await runOpenAIRequest("transcription", (client) =>
+    client.audio.transcriptions.create({
+      file,
+      model,
+      language: input.language !== "auto" ? input.language : undefined,
+      response_format:
+        model === "gpt-4o-transcribe-diarize"
+          ? "diarized_json"
+          : "verbose_json",
+      chunking_strategy:
+        model === "gpt-4o-transcribe-diarize" ? "auto" : undefined,
+      timestamp_granularities:
+        model === "gpt-4o-transcribe-diarize" ? undefined : ["segment"],
+    })
+  )
+
+  const rawText = response.text.trim()
+
+  if (!rawText) {
+    throw new Error(
+      "The audio could not be transcribed into usable speech. Check that the recording is intelligible and contains spoken audio."
+    )
+  }
 
   const segments = normalizeSegments(response)
-  const readableTranscript = buildReadableTranscript(segments, response.text)
+  const readableTranscript = buildReadableTranscript(segments, rawText)
   const durationSeconds =
     "duration" in response && typeof response.duration === "number"
       ? response.duration
@@ -105,7 +116,7 @@ export async function transcribeMeetingAudio(input: {
 
   return {
     durationSeconds,
-    rawText: response.text.trim(),
+    rawText,
     readableTranscript,
     segments,
   } satisfies NormalizedTranscript

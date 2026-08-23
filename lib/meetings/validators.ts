@@ -40,14 +40,11 @@ export const chatRequestSchema = z.object({
 
 export const exportFormatSchema = z.enum(["markdown", "text", "json"])
 
-export const updateMeetingSchema = z
+export const updateMeetingMetadataSchema = z
   .object({
     title: z.string().trim().min(1).max(160).optional(),
     description: z.string().trim().max(600).nullable().optional(),
     language: z.string().trim().min(1).max(24).optional(),
-    status: meetingStatusSchema.optional(),
-    progress: z.number().int().min(0).max(100).optional(),
-    processingError: z.string().trim().max(240).nullable().optional(),
   })
   .refine((value) => Object.keys(value).length > 0, {
     message: "At least one meeting field must be updated.",

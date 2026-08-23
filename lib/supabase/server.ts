@@ -7,7 +7,7 @@ import type { Database } from "@/types/database"
 export async function createServerSupabaseClient() {
   const env = getPublicEnv()
 
-  if (!env.NEXT_PUBLIC_SUPABASE_URL || !env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+  if (!env.NEXT_PUBLIC_SUPABASE_URL || !env.supabasePublicKey) {
     throw new Error("Supabase public environment variables are not configured.")
   }
 
@@ -15,7 +15,7 @@ export async function createServerSupabaseClient() {
 
   return createServerClient<Database>(
     env.NEXT_PUBLIC_SUPABASE_URL,
-    env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    env.supabasePublicKey,
     {
       cookies: {
         getAll() {

@@ -1,34 +1,31 @@
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
 
-import { demoMeeting } from "@/fixtures/demo-meeting"
-import { hasConfiguredSupabase } from "@/lib/env"
+import {
+  getMissingConfigurationMessage,
+  getRuntimeConfiguration,
+} from "@/lib/env"
+import { assertSameOriginMutation } from "@/lib/http/origin"
 import {
   deleteMeetingForUser,
   updateMeetingForUser,
 } from "@/lib/meetings/mutations"
 import { getMeetingForUser } from "@/lib/meetings/queries"
+import { takeRateLimitToken } from "@/lib/meetings/rate-limit"
+import { updateMeetingMetadataSchema } from "@/lib/meetings/validators"
 import {
-  isLegalMeetingTransition,
-  updateMeetingSchema,
-} from "@/lib/meetings/validators"
-import { createAdminSupabaseClient } from "@/lib/supabase/admin"
-import { getAuthenticatedUser } from "@/lib/supabase/server"
+  createServerSupabaseClient,
+  getAuthenticatedUser,
+} from "@/lib/supabase/server"
 
 const paramsSchema = z.object({
   id: z.string().min(1),
 })
 
-const bucketName = "meeting-audio"
-
 async function createAudioUrl(storagePath: string) {
-  if (!hasConfiguredSupabase()) {
-    return "/api/demo-audio"
-  }
-
-  const admin = createAdminSupabaseClient()
-  const { data, error } = await admin.storage
-    .from(bucketName)
+  const supabase = await createServerSupabaseClient()
+  const { data, error } = await supabase.storage
+    .from("meeting-audio")
     .createSignedUrl(storagePath, 60 * 60)
 
   if (error) {
@@ -42,18 +39,34 @@ export async function GET(
   _request: Request,
   context: { params: Promise<{ id: string }> }
 ) {
+  const runtime = getRuntimeConfiguration()
+
+  if (!runtime.supabaseAdminConfigured) {
+    return Response.json(
+      {
+        error:
+          getMissingConfigurationMessage("supabaseAdmin") ??
+          "Supabase admin access is not configured.",
+      },
+      { status: 503 }
+    )
+  }
+
   const user = await getAuthenticatedUser()
 
-  if (!user && hasConfiguredSupabase()) {
+  if (!user) {
     return Response.json({ error: "Unauthorized" }, { status: 401 })
   }
 
+  if (!(await takeRateLimitToken(`meeting:update:${user.id}`, 20, 60_000))) {
+    return Response.json(
+      { error: "Too many meeting updates right now." },
+      { status: 429 }
+    )
+  }
+
   const { id } = paramsSchema.parse(await context.params)
-  const meeting = user
-    ? await getMeetingForUser(id, user.id)
-    : id === demoMeeting.id
-      ? demoMeeting
-      : null
+  const meeting = await getMeetingForUser(id, user.id)
 
   if (!meeting) {
     return Response.json({ error: "Meeting not found." }, { status: 404 })
@@ -71,6 +84,25 @@ export async function PATCH(
   request: Request,
   context: { params: Promise<{ id: string }> }
 ) {
+  const runtime = getRuntimeConfiguration()
+
+  if (!runtime.supabaseAdminConfigured) {
+    return Response.json(
+      {
+        error:
+          getMissingConfigurationMessage("supabaseAdmin") ??
+          "Supabase admin access is not configured.",
+      },
+      { status: 503 }
+    )
+  }
+
+  const sameOrigin = assertSameOriginMutation(request)
+
+  if (!sameOrigin.ok) {
+    return sameOrigin.response
+  }
+
   const user = await getAuthenticatedUser()
 
   if (!user) {
@@ -84,26 +116,12 @@ export async function PATCH(
     return Response.json({ error: "Meeting not found." }, { status: 404 })
   }
 
-  const body = updateMeetingSchema.parse(await request.json())
-
-  if (
-    body.status &&
-    body.status !== meeting.status &&
-    !isLegalMeetingTransition(meeting.status, body.status)
-  ) {
-    return Response.json(
-      { error: "Illegal processing-state transition." },
-      { status: 400 }
-    )
-  }
+  const body = updateMeetingMetadataSchema.parse(await request.json())
 
   const update = {
     title: body.title,
     description: body.description,
     language: body.language,
-    status: body.status,
-    progress: body.progress,
-    processing_error: body.processingError,
   }
 
   await updateMeetingForUser(id, user.id, update)
@@ -115,13 +133,35 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ id: string }> }
 ) {
+  const runtime = getRuntimeConfiguration()
+
+  if (!runtime.supabaseClientConfigured) {
+    return Response.json(
+      { error: "Supabase is not configured for the live workspace." },
+      { status: 503 }
+    )
+  }
+
+  const sameOrigin = assertSameOriginMutation(request)
+
+  if (!sameOrigin.ok) {
+    return sameOrigin.response
+  }
+
   const user = await getAuthenticatedUser()
 
   if (!user) {
     return Response.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
+  if (!(await takeRateLimitToken(`meeting:delete:${user.id}`, 6, 60_000))) {
+    return Response.json(
+      { error: "Too many delete requests right now." },
+      { status: 429 }
+    )
   }
 
   const { id } = paramsSchema.parse(await context.params)

@@ -1,5 +1,6 @@
 import { z } from "zod"
 
+import { getRuntimeConfiguration } from "@/lib/env"
 import {
   buildMeetingJsonExport,
   buildMeetingMarkdownExport,
@@ -17,6 +18,15 @@ export async function GET(
   request: Request,
   context: { params: Promise<{ id: string }> }
 ) {
+  const runtime = getRuntimeConfiguration()
+
+  if (!runtime.supabaseClientConfigured) {
+    return Response.json(
+      { error: "Supabase is not configured for the live workspace." },
+      { status: 503 }
+    )
+  }
+
   const user = await getAuthenticatedUser()
 
   if (!user) {

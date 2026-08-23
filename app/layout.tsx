@@ -27,7 +27,7 @@ const fontMono = Fira_Code({
 })
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://minute-bloom.vercel.app"),
+  metadataBase: new URL(appConfig.externalUrls.production),
   title: "MinuteBloom - AI Meeting Summarizer",
   description:
     "Upload a meeting recording and turn it into a timestamped transcript, clear decisions, and action-ready notes.",
@@ -51,6 +51,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
+      data-scroll-behavior="smooth"
       className={cn(
         "scroll-smooth antialiased",
         fontSans.variable,

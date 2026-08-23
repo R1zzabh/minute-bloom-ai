@@ -1,12 +1,17 @@
-import { hasConfiguredSupabase } from "@/lib/env"
+import { getRuntimeConfiguration } from "@/lib/env"
+import { getSafePostAuthPath } from "@/lib/auth/redirect"
 import { createServerSupabaseClient } from "@/lib/supabase/server"
 
 export async function GET(request: Request) {
   const url = new URL(request.url)
   const code = url.searchParams.get("code")
-  const nextPath = url.searchParams.get("next") ?? "/app"
+  const nextPath = getSafePostAuthPath(
+    url.searchParams.get("next"),
+    request.url
+  )
+  const runtime = getRuntimeConfiguration()
 
-  if (!hasConfiguredSupabase()) {
+  if (!runtime.supabaseClientConfigured) {
     return Response.redirect(new URL("/sign-in", request.url))
   }
 
