@@ -1,31 +1,30 @@
 "use client"
 
-import { useRouter } from "next/navigation"
-import { toast } from "sonner"
+import { useFormStatus } from "react-dom"
 
-import { createBrowserSupabaseClient } from "@/lib/supabase/client"
+import { signOutAction } from "@/app/(workspace)/app/actions"
 import { Button, type ButtonProps } from "@/components/ui/button"
 
-export function SignOutButton(props: ButtonProps) {
-  const router = useRouter()
+function SubmitButton({
+  children,
+  ...props
+}: ButtonProps & { children?: React.ReactNode }) {
+  const { pending } = useFormStatus()
 
-  async function handleClick() {
-    try {
-      const supabase = createBrowserSupabaseClient()
-      const { error } = await supabase.auth.signOut()
+  return (
+    <Button {...props} type="submit" disabled={pending || props.disabled}>
+      {pending ? "Signing out..." : children}
+    </Button>
+  )
+}
 
-      if (error) {
-        throw error
-      }
-
-      router.push("/")
-      router.refresh()
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Unable to sign out."
-      )
-    }
-  }
-
-  return <Button {...props} onClick={handleClick} />
+export function SignOutButton({
+  children = "Sign out",
+  ...props
+}: ButtonProps) {
+  return (
+    <form action={signOutAction}>
+      <SubmitButton {...props}>{children}</SubmitButton>
+    </form>
+  )
 }

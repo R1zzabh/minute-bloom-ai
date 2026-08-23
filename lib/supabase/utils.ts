@@ -3,6 +3,7 @@ export function sanitizeErrorMessage(error: unknown) {
     let sanitized = error.message
     const secrets = [
       process.env.OPENAI_API_KEY,
+      process.env.GROQ_API_KEY,
       process.env.SUPABASE_SECRET_KEY,
       process.env.SUPABASE_SERVICE_ROLE_KEY,
       process.env.CRON_SECRET,
@@ -25,4 +26,15 @@ export function sanitizeErrorMessage(error: unknown) {
   }
 
   return "Unexpected processing error."
+}
+
+export function getSupabaseAuthStorageKey(supabaseUrl: string) {
+  const hostname = new URL(supabaseUrl).hostname
+  const projectRef = hostname.split(".")[0]
+
+  return `sb-${projectRef}-auth-token`
+}
+
+export function isSupabaseAuthCookieName(name: string, storageKey: string) {
+  return name === storageKey || name.startsWith(`${storageKey}.`)
 }
