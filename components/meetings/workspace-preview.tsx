@@ -28,7 +28,7 @@ export function WorkspacePreview({ compact = false }: { compact?: boolean }) {
                 {demoMeeting.title}
               </h3>
             </div>
-            <Badge variant="secondary">speaker-aware</Badge>
+            <Badge variant="secondary">timestamped</Badge>
           </div>
           <div className="surface-card bg-background/90 p-4">
             <div className="flex items-center justify-between gap-3 border-b-2 border-border pb-3">
@@ -68,9 +68,11 @@ export function WorkspacePreview({ compact = false }: { compact?: boolean }) {
                       <span className="font-mono text-xs text-muted-foreground">
                         {formatTimestamp(segment.startSeconds)}
                       </span>
-                      <span className="text-xs font-medium text-primary">
-                        {segment.speaker}
-                      </span>
+                      {segment.speaker ? (
+                        <span className="text-xs font-medium text-primary">
+                          {segment.speaker}
+                        </span>
+                      ) : null}
                     </div>
                     <p className="text-sm leading-6">{segment.text}</p>
                   </div>

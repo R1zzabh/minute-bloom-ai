@@ -9,14 +9,16 @@ describe("sanitizeErrorMessage", () => {
 
   it("redacts configured non-empty secrets", () => {
     process.env.OPENAI_API_KEY = "sk-secret"
+    process.env.GROQ_API_KEY = "gsk-secret"
     process.env.SUPABASE_SECRET_KEY = "sb-secret"
     process.env.CRON_SECRET = "cron-secret"
 
     const message = sanitizeErrorMessage(
-      new Error("Failed sk-secret and sb-secret and cron-secret")
+      new Error("Failed sk-secret and gsk-secret and sb-secret and cron-secret")
     )
 
     expect(message).not.toContain("sk-secret")
+    expect(message).not.toContain("gsk-secret")
     expect(message).not.toContain("sb-secret")
     expect(message).not.toContain("cron-secret")
     expect(message).toContain("[redacted]")

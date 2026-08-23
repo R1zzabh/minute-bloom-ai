@@ -12,9 +12,9 @@ As of Sunday, August 23, 2026, MinuteBloom AI uses a queue-backed processing des
 
 1. The browser creates a meeting row in `public.meetings`.
 2. The browser uploads the media file directly into the private `meeting-audio` bucket.
-3. `POST /api/meetings/[id]/upload-complete` verifies the storage object exists before changing the meeting state to `uploaded`.
-4. `POST /api/meetings/[id]/process` records a queue job in `public.meeting_processing_jobs`, updates the visible meeting state, and returns `202`.
-5. A best-effort immediate trigger calls `/api/internal/meeting-processing` after the response completes.
+3. `POST /api/meetings/[id]/upload-complete` verifies the storage object exists, marks the meeting `uploaded`, records a queue job in `public.meeting_processing_jobs`, and returns `202`.
+4. A best-effort immediate trigger calls `/api/internal/meeting-processing` after the response completes.
+5. `POST /api/meetings/[id]/process` and `POST /api/meetings/[id]/retry` reuse the same server-side queueing helper when manual requeueing is needed.
 6. Vercel cron hits `/api/internal/meeting-processing` every minute for durable recovery.
 7. The worker claims one queued or stale job through `claim_meeting_processing_job`, downloads the private object, validates the audio, transcribes it, persists the transcript, summarizes it, replaces action items, and finalizes the meeting.
 
@@ -36,6 +36,7 @@ As of Sunday, August 23, 2026, MinuteBloom AI uses a queue-backed processing des
 
 - Transcript persistence happens before summary generation.
 - Action items are replaced idempotently after summary generation.
-- Failed jobs record sanitized errors and can be retried safely.
+- Failed jobs record sanitized provider-aware errors and can be retried safely.
 - Queued jobs use leases so stale work can be reclaimed after interruptions.
 - Shared database rate limits protect uploads, mutable workspace actions, processing, retries, and Ask AI routes across deployments.
+- The active AI provider is selected server-side through `AI_PROVIDER`; browser code does not receive provider secrets.

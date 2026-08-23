@@ -16,10 +16,12 @@ function formatBulletList(items: string[]) {
 
 export function buildMeetingMarkdownExport(meeting: MeetingRecord) {
   const summary = meeting.summary
-  const transcript = meeting.transcriptSegments.map(
-    (segment) =>
-      `- [${formatTimestamp(segment.startSeconds)}] ${sanitizeExportText(segment.speaker) || "Speaker"}: ${sanitizeExportText(segment.text)}`
-  )
+  const transcript = meeting.transcriptSegments.map((segment) => {
+    const speaker = sanitizeExportText(segment.speaker)
+    const prefix = speaker ? `${speaker}: ` : ""
+
+    return `- [${formatTimestamp(segment.startSeconds)}] ${prefix}${sanitizeExportText(segment.text)}`
+  })
   const decisions = (summary?.decisions ?? []).map(
     (item) => `- ${sanitizeExportText(item.decision)}`
   )
@@ -53,10 +55,12 @@ export function buildMeetingTextExport(meeting: MeetingRecord) {
     (item) =>
       `- ${sanitizeExportText(item.task)} | ${sanitizeExportText(item.owner) || "Unassigned"} | ${item.priority} | ${item.status}`
   )
-  const transcriptLines = meeting.transcriptSegments.map(
-    (segment) =>
-      `- [${formatTimestamp(segment.startSeconds)}] ${sanitizeExportText(segment.speaker) || "Speaker"}: ${sanitizeExportText(segment.text)}`
-  )
+  const transcriptLines = meeting.transcriptSegments.map((segment) => {
+    const speaker = sanitizeExportText(segment.speaker)
+    const prefix = speaker ? `${speaker}: ` : ""
+
+    return `- [${formatTimestamp(segment.startSeconds)}] ${prefix}${sanitizeExportText(segment.text)}`
+  })
 
   return [
     sanitizeExportText(meeting.title),

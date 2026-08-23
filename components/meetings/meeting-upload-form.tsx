@@ -27,6 +27,8 @@ import { formatBytes } from "@/lib/utils"
 
 const steps = ["Uploading", "Uploaded", "Transcribing", "Summarizing"] as const
 const bucketName = "meeting-audio"
+const missingStoragePathError =
+  "Upload setup failed because the server did not return a storage path."
 
 function UploadStep({
   active,
@@ -225,19 +227,31 @@ export function MeetingUploadForm({
 
       const createPayload = (await createResponse.json()) as {
         error?: string
-        meeting?: { id: string; storagePath: string }
+        meeting?: {
+          id?: string
+          status?: string
+          storagePath?: string
+        }
       }
 
-      if (!createResponse.ok || !createPayload.meeting) {
+      if (!createResponse.ok || !createPayload.meeting?.id) {
         throw new Error(createPayload.error ?? "Unable to create meeting.")
       }
 
+      if (
+        typeof createPayload.meeting.storagePath !== "string" ||
+        createPayload.meeting.storagePath.trim().length === 0
+      ) {
+        throw new Error(missingStoragePathError)
+      }
+
       meetingId = createPayload.meeting.id
+      const storagePath = createPayload.meeting.storagePath
 
       if (file.size > RESUMABLE_UPLOAD_THRESHOLD_BYTES) {
-        await uploadResumable(createPayload.meeting.storagePath, file)
+        await uploadResumable(storagePath, file)
       } else {
-        await uploadStandard(createPayload.meeting.storagePath, file)
+        await uploadStandard(storagePath, file)
       }
 
       setActiveStep("Uploaded")
@@ -259,22 +273,6 @@ export function MeetingUploadForm({
       }
 
       setActiveStep("Transcribing")
-
-      const processResponse = await fetch(
-        `/api/meetings/${meetingId}/process`,
-        {
-          method: "POST",
-        }
-      )
-
-      if (!processResponse.ok && processResponse.status !== 202) {
-        const processPayload = (await processResponse.json()) as {
-          error?: string
-        }
-        throw new Error(
-          processPayload.error ?? "Unable to start meeting processing."
-        )
-      }
 
       toast.success("Upload complete. MinuteBloom is processing the meeting.")
       router.push(`/app/meetings/${meetingId}`)
@@ -444,9 +442,9 @@ export function MeetingUploadForm({
           </div>
           {!liveUploadsEnabled ? (
             <p className="mt-4 text-sm text-muted-foreground">
-              Live upload is disabled until public Supabase and OpenAI
-              environment variables are configured. The demo route remains
-              available for review.
+              Live upload is disabled until public Supabase and the selected AI
+              provider environment variables are configured. The demo route
+              remains available for review.
             </p>
           ) : null}
           <p className="mt-4 text-sm text-muted-foreground">

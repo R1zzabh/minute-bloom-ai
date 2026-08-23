@@ -35,6 +35,7 @@ import {
 } from "@/lib/utils"
 
 const tabs = ["Overview", "Transcript", "Action Items", "Ask AI"] as const
+const allTranscriptLinesLabel = "All transcript lines"
 
 type WorkspaceMode = "live" | "demo"
 
@@ -101,7 +102,9 @@ export function MeetingWorkspace({
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const [activeTab, setActiveTab] = useState<(typeof tabs)[number]>("Overview")
   const [transcriptQuery, setTranscriptQuery] = useState("")
-  const [speakerFilter, setSpeakerFilter] = useState<string>("All speakers")
+  const [speakerFilter, setSpeakerFilter] = useState<string>(
+    allTranscriptLinesLabel
+  )
   const [actionQuery, setActionQuery] = useState("")
   const [meetingState, setMeetingState] = useState(meeting)
   const [draftActionItems, setDraftActionItems] = useState(meeting.actionItems)
@@ -195,7 +198,8 @@ export function MeetingWorkspace({
 
     return meetingState.transcriptSegments.filter((segment) => {
       const matchesSpeaker =
-        speakerFilter === "All speakers" || segment.speaker === speakerFilter
+        speakerFilter === allTranscriptLinesLabel ||
+        segment.speaker === speakerFilter
       const matchesQuery =
         query.length === 0 ||
         `${segment.speaker ?? ""} ${segment.text}`.toLowerCase().includes(query)
@@ -629,20 +633,20 @@ export function MeetingWorkspace({
                 aria-label="Search transcript"
                 value={transcriptQuery}
                 onChange={(event) => setTranscriptQuery(event.target.value)}
-                placeholder="Search by speaker, phrase, or keyword"
+                placeholder="Search by phrase or keyword"
               />
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
-                  onClick={() => setSpeakerFilter("All speakers")}
+                  onClick={() => setSpeakerFilter(allTranscriptLinesLabel)}
                   className={cn(
                     "pressable rounded-md border-2 border-border px-3 py-2 text-xs shadow-[var(--shadow-xs)]",
-                    speakerFilter === "All speakers"
+                    speakerFilter === allTranscriptLinesLabel
                       ? "bg-primary text-primary-foreground"
                       : "bg-card"
                   )}
                 >
-                  All speakers
+                  All transcript lines
                 </button>
                 {speakers.map((speaker) => (
                   <button
@@ -660,6 +664,11 @@ export function MeetingWorkspace({
                   </button>
                 ))}
               </div>
+              {speakers.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Speaker labels were not provided for this transcript.
+                </p>
+              ) : null}
               <div className="space-y-3">
                 {filteredTranscript.map((segment) => (
                   <Card key={segment.id} className="p-4">
@@ -671,7 +680,9 @@ export function MeetingWorkspace({
                       >
                         {formatTimestamp(segment.startSeconds)}
                       </button>
-                      <Badge>{segment.speaker ?? "Unknown speaker"}</Badge>
+                      {segment.speaker ? (
+                        <Badge>{segment.speaker}</Badge>
+                      ) : null}
                     </div>
                     <p className="mt-3 text-sm leading-7">{segment.text}</p>
                   </Card>
@@ -680,7 +691,7 @@ export function MeetingWorkspace({
                   <Card>
                     <p className="text-sm text-muted-foreground">
                       No transcript segments match the current search and
-                      speaker filters.
+                      transcript filters.
                     </p>
                   </Card>
                 ) : null}
@@ -952,9 +963,7 @@ export function MeetingWorkspace({
             <p className="mono-label">what ships today</p>
             <div className="mt-4 space-y-3 text-sm text-muted-foreground">
               <p>Private uploads with explicit 25 MB validation.</p>
-              <p>
-                Speaker-aware transcript rendering with timestamp navigation.
-              </p>
+              <p>Timestamped transcript rendering with timestamp navigation.</p>
               <p>
                 Searchable notes, exports, retry states, and grounded follow-up.
               </p>

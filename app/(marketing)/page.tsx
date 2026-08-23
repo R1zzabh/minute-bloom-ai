@@ -20,7 +20,7 @@ const featureCards = [
   {
     icon: FileAudio,
     title: "Transcription that keeps context intact",
-    body: "MinuteBloom is built around timestamped, speaker-aware meeting records so the notes stay anchored to what was actually said.",
+    body: "MinuteBloom is built around timestamped meeting records so the notes stay anchored to what was actually said, with speaker labels preserved only when the provider exposes them reliably.",
   },
   {
     icon: ListChecks,
@@ -42,7 +42,7 @@ export default function MarketingPage() {
                 Meetings end. Momentum starts.
               </h1>
               <p className="mt-6 max-w-xl text-lg leading-8 text-muted-foreground">
-                Upload a recording and leave with a speaker-aware transcript,
+                Upload a recording and leave with a timestamped transcript,
                 clear decisions, and action items your team can actually use.
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -66,7 +66,7 @@ export default function MarketingPage() {
               <div className="mt-8 flex flex-wrap gap-3 text-sm text-muted-foreground">
                 <span>Private uploads</span>
                 <span>·</span>
-                <span>Speaker-aware notes</span>
+                <span>Timestamped notes</span>
                 <span>·</span>
                 <span>Export-ready</span>
               </div>

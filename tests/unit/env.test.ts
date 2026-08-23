@@ -35,9 +35,11 @@ describe("environment configuration", () => {
       NEXT_PUBLIC_SUPABASE_URL: " https://example.supabase.co ",
       NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: " sb_publishable_test ",
       SUPABASE_SECRET_KEY: " sb_secret_test ",
-      OPENAI_API_KEY: " sk-test ",
-      OPENAI_TRANSCRIPTION_MODEL: " gpt-4o-transcribe-diarize ",
-      OPENAI_SUMMARY_MODEL: " gpt-4.1-mini ",
+      AI_PROVIDER: " groq ",
+      GROQ_API_KEY: " gsk-test ",
+      GROQ_BASE_URL: " https://api.groq.com/openai/v1 ",
+      GROQ_TRANSCRIPTION_MODEL: " whisper-large-v3-turbo ",
+      GROQ_SUMMARY_MODEL: " openai/gpt-oss-20b ",
       CRON_SECRET: " cron-secret ",
     })
 
@@ -47,6 +49,10 @@ describe("environment configuration", () => {
 
     expect(publicEnv.supabasePublicKey).toBe("sb_publishable_test")
     expect(serverEnv.supabaseServerKey).toBe("sb_secret_test")
+    expect(serverEnv.AI_PROVIDER).toBe("groq")
+    expect(runtime.aiProvider).toBe("groq")
+    expect(runtime.groqConfigured).toBe(true)
+    expect(runtime.aiConfigured).toBe(true)
     expect(runtime.supabaseClientConfigured).toBe(true)
     expect(runtime.supabaseAdminConfigured).toBe(true)
     expect(runtime.liveProcessingConfigured).toBe(true)
@@ -58,9 +64,11 @@ describe("environment configuration", () => {
       NEXT_PUBLIC_SUPABASE_URL: "https://example.supabase.co",
       NEXT_PUBLIC_SUPABASE_ANON_KEY: "legacy-anon",
       SUPABASE_SERVICE_ROLE_KEY: "legacy-service-role",
-      OPENAI_API_KEY: "sk-test",
-      OPENAI_TRANSCRIPTION_MODEL: "gpt-4o-transcribe-diarize",
-      OPENAI_SUMMARY_MODEL: "gpt-4.1-mini",
+      AI_PROVIDER: "groq",
+      GROQ_API_KEY: "gsk-test",
+      GROQ_BASE_URL: "https://api.groq.com/openai/v1",
+      GROQ_TRANSCRIPTION_MODEL: "whisper-large-v3-turbo",
+      GROQ_SUMMARY_MODEL: "openai/gpt-oss-20b",
       CRON_SECRET: "cron-secret",
     })
 
@@ -76,9 +84,10 @@ describe("environment configuration", () => {
       NEXT_PUBLIC_SUPABASE_URL: "   ",
       NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "   ",
       SUPABASE_SECRET_KEY: "   ",
-      OPENAI_API_KEY: "   ",
-      OPENAI_TRANSCRIPTION_MODEL: "   ",
-      OPENAI_SUMMARY_MODEL: "   ",
+      GROQ_API_KEY: "   ",
+      GROQ_BASE_URL: "   ",
+      GROQ_TRANSCRIPTION_MODEL: "   ",
+      GROQ_SUMMARY_MODEL: "   ",
       CRON_SECRET: "   ",
     })
 
@@ -86,7 +95,8 @@ describe("environment configuration", () => {
 
     expect(runtime.supabaseClientConfigured).toBe(false)
     expect(runtime.supabaseAdminConfigured).toBe(false)
-    expect(runtime.openAIConfigured).toBe(false)
+    expect(runtime.groqConfigured).toBe(false)
+    expect(runtime.aiConfigured).toBe(false)
     expect(runtime.workerConfigured).toBe(false)
   })
 
@@ -94,28 +104,52 @@ describe("environment configuration", () => {
     resetEnv({
       NEXT_PUBLIC_SUPABASE_URL: "https://example.supabase.co",
       NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_test",
+      AI_PROVIDER: "groq",
     })
 
     const runtime = getRuntimeConfiguration()
 
     expect(runtime.supabaseClientConfigured).toBe(true)
     expect(runtime.supabaseAdminConfigured).toBe(false)
-    expect(runtime.openAIConfigured).toBe(false)
+    expect(runtime.aiConfigured).toBe(false)
     expect(runtime.liveProcessingConfigured).toBe(false)
   })
 
-  it("keeps openai-only configuration out of live mode", () => {
+  it("keeps ai-only configuration out of live mode without supabase", () => {
     resetEnv({
-      OPENAI_API_KEY: "sk-test",
-      OPENAI_TRANSCRIPTION_MODEL: "gpt-4o-transcribe-diarize",
-      OPENAI_SUMMARY_MODEL: "gpt-4.1-mini",
+      AI_PROVIDER: "groq",
+      GROQ_API_KEY: "gsk-test",
+      GROQ_BASE_URL: "https://api.groq.com/openai/v1",
+      GROQ_TRANSCRIPTION_MODEL: "whisper-large-v3-turbo",
+      GROQ_SUMMARY_MODEL: "openai/gpt-oss-20b",
       CRON_SECRET: "cron-secret",
     })
 
     const runtime = getRuntimeConfiguration()
 
-    expect(runtime.openAIConfigured).toBe(true)
+    expect(runtime.groqConfigured).toBe(true)
     expect(runtime.supabaseClientConfigured).toBe(false)
     expect(runtime.liveProcessingConfigured).toBe(false)
+  })
+
+  it("keeps inactive openai settings from blocking groq live mode", () => {
+    resetEnv({
+      NEXT_PUBLIC_SUPABASE_URL: "https://example.supabase.co",
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_test",
+      SUPABASE_SECRET_KEY: "sb_secret_test",
+      AI_PROVIDER: "groq",
+      GROQ_API_KEY: "gsk-test",
+      GROQ_BASE_URL: "https://api.groq.com/openai/v1",
+      GROQ_TRANSCRIPTION_MODEL: "whisper-large-v3-turbo",
+      GROQ_SUMMARY_MODEL: "openai/gpt-oss-20b",
+      OPENAI_API_KEY: "sk-unused",
+      CRON_SECRET: "cron-secret",
+    })
+
+    const runtime = getRuntimeConfiguration()
+
+    expect(runtime.groqConfigured).toBe(true)
+    expect(runtime.openAIConfigured).toBe(false)
+    expect(runtime.liveProcessingConfigured).toBe(true)
   })
 })

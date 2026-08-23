@@ -5,6 +5,7 @@ import {
   getRuntimeConfiguration,
 } from "@/lib/env"
 import { assertSameOriginMutation } from "@/lib/http/origin"
+import { queueMeetingForProcessing } from "@/lib/meetings/jobs"
 import { takeRateLimitToken } from "@/lib/meetings/rate-limit"
 import { getMeetingForUser } from "@/lib/meetings/queries"
 import {
@@ -126,5 +127,28 @@ export async function POST(
     )
   }
 
-  return Response.json({ ok: true, status: "uploaded" })
+  try {
+    await queueMeetingForProcessing({
+      meetingId: id,
+      userId: user.id,
+      requestUrl: request.url,
+      currentStatus: "uploaded",
+      hasTranscript: meeting.transcriptSegments.length > 0,
+    })
+  } catch (error) {
+    return Response.json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Unable to start meeting processing.",
+      },
+      { status: 500 }
+    )
+  }
+
+  return Response.json(
+    { ok: true, status: "uploaded", progress: 25 },
+    { status: 202 }
+  )
 }

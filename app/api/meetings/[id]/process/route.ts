@@ -5,13 +5,9 @@ import {
   getRuntimeConfiguration,
 } from "@/lib/env"
 import { assertSameOriginMutation } from "@/lib/http/origin"
-import {
-  enqueueMeetingProcessingJob,
-  scheduleMeetingWorker,
-} from "@/lib/meetings/jobs"
+import { queueMeetingForProcessing } from "@/lib/meetings/jobs"
 import { takeRateLimitToken } from "@/lib/meetings/rate-limit"
 import { getMeetingForUser } from "@/lib/meetings/queries"
-import { createAdminSupabaseClient } from "@/lib/supabase/admin"
 import { getAuthenticatedUser } from "@/lib/supabase/server"
 
 const paramsSchema = z.object({
@@ -72,37 +68,32 @@ export async function POST(
     )
   }
 
-  const nextStatus =
-    meeting.transcriptSegments.length > 0 ? "summarizing" : "transcribing"
-  const nextProgress = meeting.transcriptSegments.length > 0 ? 70 : 35
-  const admin = createAdminSupabaseClient()
-
-  const { error: updateError } = await admin
-    .from("meetings")
-    .update({
-      status: nextStatus,
-      progress: nextProgress,
-      processing_error: null,
+  try {
+    const queuedState = await queueMeetingForProcessing({
+      meetingId: id,
+      userId: user.id,
+      requestUrl: request.url,
+      currentStatus: meeting.status,
+      hasTranscript: meeting.transcriptSegments.length > 0,
     })
-    .eq("id", id)
-    .eq("user_id", user.id)
-    .in("status", ["uploaded", "failed", "transcribing", "summarizing"])
 
-  if (updateError) {
     return Response.json(
-      { error: "Unable to queue the meeting for processing." },
+      {
+        ok: true,
+        status: queuedState.status,
+        progress: queuedState.progress,
+      },
+      { status: 202 }
+    )
+  } catch (error) {
+    return Response.json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Unable to queue the meeting for processing.",
+      },
       { status: 500 }
     )
   }
-
-  await enqueueMeetingProcessingJob({
-    meetingId: id,
-    userId: user.id,
-  })
-  scheduleMeetingWorker(request.url)
-
-  return Response.json(
-    { ok: true, status: nextStatus, progress: nextProgress },
-    { status: 202 }
-  )
 }

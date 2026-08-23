@@ -46,13 +46,14 @@
 - Full live-processing configuration required
 - Shared rate-limited
 - Verifies the owned storage object exists before marking the meeting `uploaded`
+- Enqueues a processing job and triggers the local worker best-effort path
 
 ## `POST /api/meetings/[id]/process`
 
 - Auth required
 - Same-origin required
 - Shared rate-limited
-- Queues work and returns `202`
+- Requeues work safely and returns `202`
 - Does not wait for transcription or summarization to finish
 
 ## `POST /api/meetings/[id]/retry`
@@ -87,3 +88,4 @@
 
 - Secret-protected with `Authorization: Bearer <CRON_SECRET>`
 - Used by both best-effort immediate triggers and Vercel cron recovery
+- Safe to invoke locally in development to consume queued jobs

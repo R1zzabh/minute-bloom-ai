@@ -119,6 +119,13 @@ describe("meetings route", () => {
     )
 
     expect(response.status).toBe(201)
+    expect(await response.json()).toEqual({
+      meeting: {
+        id: "meeting-1",
+        storagePath: "user-1/meeting-1/demo.mp3",
+        status: "uploading",
+      },
+    })
     expect(mocks.createMeetingRecord).toHaveBeenCalledWith("user-1", {
       title: "Launch sync",
       language: "auto",

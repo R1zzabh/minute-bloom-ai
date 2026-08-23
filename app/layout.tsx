@@ -36,7 +36,7 @@ export const metadata: Metadata = {
     "meeting summarizer",
     "meeting transcript",
     "action items",
-    "OpenAI transcription",
+    "AI transcription",
     "Supabase",
     "Next.js",
   ],

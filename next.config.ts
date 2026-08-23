@@ -6,6 +6,16 @@ const supabaseHost =
     .replace(/^https?:\/\//, "") ?? "*.supabase.co"
 const isHttpsApp =
   process.env.NEXT_PUBLIC_APP_URL?.trim().startsWith("https://")
+const connectSrc = [
+  "'self'",
+  `https://${supabaseHost}`,
+  "https://api.openai.com",
+]
+
+if (process.env.NODE_ENV === "development") {
+  connectSrc.push("ws:", "wss:")
+}
+
 const csp = [
   "default-src 'self'",
   "base-uri 'self'",
@@ -13,7 +23,7 @@ const csp = [
   "form-action 'self'",
   "img-src 'self' data: blob: https:",
   "media-src 'self' blob: data: https:",
-  `connect-src 'self' https://${supabaseHost} https://api.openai.com`,
+  `connect-src ${connectSrc.join(" ")}`,
   "font-src 'self' https: data:",
   "object-src 'none'",
   "style-src 'self' 'unsafe-inline' https:",

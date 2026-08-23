@@ -8,10 +8,13 @@ export async function GET() {
     service: "minute-bloom",
     timestamp: new Date().toISOString(),
     runtime: {
+      aiProvider: runtime.aiProvider,
       appUrlConfigured: runtime.appUrlConfigured,
       supabaseClientConfigured: runtime.supabaseClientConfigured,
       supabaseAdminConfigured: runtime.supabaseAdminConfigured,
+      aiConfigured: runtime.aiConfigured,
       openAIConfigured: runtime.openAIConfigured,
+      groqConfigured: runtime.groqConfigured,
       liveProcessingConfigured: runtime.liveProcessingConfigured,
       demoMode: runtime.demoMode,
     },

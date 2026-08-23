@@ -53,8 +53,12 @@ export default async function SettingsPage() {
               Supabase admin{" "}
               {runtime.supabaseAdminConfigured ? "ready" : "missing"}
             </Badge>
-            <Badge variant={runtime.openAIConfigured ? "primary" : "accent"}>
-              OpenAI {runtime.openAIConfigured ? "ready" : "missing"}
+            <Badge variant={runtime.aiConfigured ? "primary" : "accent"}>
+              {runtime.aiProvider === "groq" ? "Groq" : "OpenAI"}{" "}
+              {runtime.aiConfigured ? "ready" : "missing"}
+            </Badge>
+            <Badge variant={runtime.groqConfigured ? "primary" : "accent"}>
+              Groq {runtime.groqConfigured ? "ready" : "missing"}
             </Badge>
             <Badge
               variant={runtime.liveProcessingConfigured ? "primary" : "accent"}
@@ -65,7 +69,7 @@ export default async function SettingsPage() {
           </div>
           <p className="mt-4 text-sm leading-7 text-muted-foreground">
             {runtime.liveProcessingConfigured
-              ? "Real uploads, queue-backed processing, and grounded Ask AI are enabled in this workspace."
+              ? `Real uploads, queue-backed processing, and grounded Ask AI are enabled with ${runtime.aiProvider === "groq" ? "Groq" : "OpenAI"} in this workspace.`
               : `Live processing is disabled until these variables are configured: ${runtime.missing.liveProcessing.join(", ")}.`}
           </p>
           <p className="mt-3 text-sm leading-7 text-muted-foreground">

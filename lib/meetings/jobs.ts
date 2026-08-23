@@ -6,6 +6,7 @@ import {
   PROCESSING_RETRY_BACKOFF_SECONDS,
 } from "@/lib/constants"
 import { getServerEnv, hasConfiguredSupabaseAdmin } from "@/lib/env"
+import { sanitizeErrorMessage } from "@/lib/supabase/utils"
 import { createAdminSupabaseClient } from "@/lib/supabase/admin"
 import type { Database } from "@/types/database"
 
@@ -28,6 +29,50 @@ export function getRetryBackoffSeconds(attemptCount: number) {
     PROCESSING_RETRY_BACKOFF_SECONDS.at(-1) ??
     3600
   )
+}
+
+export function getQueuedMeetingState(input: {
+  currentStatus:
+    | "uploaded"
+    | "failed"
+    | "transcribing"
+    | "summarizing"
+    | "completed"
+    | "uploading"
+  hasTranscript: boolean
+}) {
+  if (
+    input.currentStatus === "completed" ||
+    input.currentStatus === "uploading"
+  ) {
+    return null
+  }
+
+  if (input.currentStatus === "transcribing") {
+    return {
+      status: "transcribing" as const,
+      progress: 35,
+    }
+  }
+
+  if (input.currentStatus === "summarizing") {
+    return {
+      status: "summarizing" as const,
+      progress: 70,
+    }
+  }
+
+  if (input.hasTranscript) {
+    return {
+      status: "summarizing" as const,
+      progress: 70,
+    }
+  }
+
+  return {
+    status: "uploaded" as const,
+    progress: 25,
+  }
 }
 
 export async function enqueueMeetingProcessingJob(input: {
@@ -68,6 +113,30 @@ export async function enqueueMeetingProcessingJob(input: {
   if (error) {
     throw new Error("Unable to enqueue the meeting for processing.")
   }
+}
+
+export async function markMeetingProcessingFailed(input: {
+  meetingId: string
+  userId: string
+  error: unknown
+}) {
+  if (!hasConfiguredSupabaseAdmin()) {
+    return "Unexpected processing error."
+  }
+
+  const admin = createAdminSupabaseClient()
+  const safeError = sanitizeErrorMessage(input.error)
+
+  await admin
+    .from("meetings")
+    .update({
+      status: "failed",
+      processing_error: safeError,
+    })
+    .eq("id", input.meetingId)
+    .eq("user_id", input.userId)
+
+  return safeError
 }
 
 export async function claimMeetingProcessingJob(workerId: string) {
@@ -141,6 +210,64 @@ export async function failMeetingProcessingJob(input: {
     })
     .eq("meeting_id", input.meetingId)
     .eq("locked_by", input.workerId)
+}
+
+export async function queueMeetingForProcessing(input: {
+  meetingId: string
+  userId: string
+  requestUrl: string
+  currentStatus:
+    | "uploaded"
+    | "failed"
+    | "transcribing"
+    | "summarizing"
+    | "completed"
+    | "uploading"
+  hasTranscript: boolean
+  resetAttempts?: boolean
+}) {
+  const queuedState = getQueuedMeetingState({
+    currentStatus: input.currentStatus,
+    hasTranscript: input.hasTranscript,
+  })
+
+  if (!queuedState) {
+    throw new Error("This meeting cannot be queued for processing yet.")
+  }
+
+  try {
+    const admin = createAdminSupabaseClient()
+    const { error: updateError } = await admin
+      .from("meetings")
+      .update({
+        status: queuedState.status,
+        progress: queuedState.progress,
+        processing_error: null,
+      })
+      .eq("id", input.meetingId)
+      .eq("user_id", input.userId)
+
+    if (updateError) {
+      throw new Error("Unable to queue the meeting for processing.")
+    }
+
+    await enqueueMeetingProcessingJob({
+      meetingId: input.meetingId,
+      userId: input.userId,
+      resetAttempts: input.resetAttempts,
+    })
+  } catch (error) {
+    const safeError = await markMeetingProcessingFailed({
+      meetingId: input.meetingId,
+      userId: input.userId,
+      error,
+    })
+    throw new Error(safeError)
+  }
+
+  scheduleMeetingWorker(input.requestUrl)
+
+  return queuedState
 }
 
 export function scheduleMeetingWorker(requestUrl: string) {

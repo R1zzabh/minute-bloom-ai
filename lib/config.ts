@@ -20,7 +20,7 @@ export const appConfig = {
     { label: "FAQ", href: "#faq" },
   ],
   capabilityStrip: [
-    "Speaker-aware",
+    "Timestamped",
     "Searchable",
     "Action-first",
     "Export-ready",
@@ -34,7 +34,7 @@ export const appConfig = {
     {
       step: "02",
       title: "Transcribe",
-      body: "Turn the recording into a timestamped transcript with speaker labels when the provider exposes them.",
+      body: "Turn the recording into a timestamped transcript and preserve speaker labels only when the provider exposes them reliably.",
     },
     {
       step: "03",

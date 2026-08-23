@@ -61,7 +61,11 @@ export async function createMeetingRecord(
     throw new Error("Unable to create meeting.")
   }
 
-  return data
+  return {
+    id: data.id,
+    storagePath: data.storage_path,
+    status: data.status,
+  }
 }
 
 export async function deleteMeetingForUser(meetingId: string, userId: string) {

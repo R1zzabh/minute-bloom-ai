@@ -1,11 +1,10 @@
 import { toFile } from "openai"
 import type {
   TranscriptionCreateResponse,
-  TranscriptionDiarized,
   TranscriptionVerbose,
 } from "openai/resources/audio/transcriptions"
 
-import { getTranscriptionModel, runOpenAIRequest } from "@/lib/ai/openai"
+import { getTranscriptionModel, runAIRequest } from "@/lib/ai/provider"
 import { transcriptSegmentSchema } from "@/lib/ai/schemas"
 import type { TranscriptSegment } from "@/types/meeting"
 
@@ -16,41 +15,31 @@ export type NormalizedTranscript = {
   segments: TranscriptSegment[]
 }
 
-function isDiarizedResult(
-  value: TranscriptionCreateResponse
-): value is TranscriptionDiarized {
-  return "segments" in value && Array.isArray(value.segments) && "task" in value
-}
-
 function isVerboseResult(
   value: TranscriptionCreateResponse
 ): value is TranscriptionVerbose {
-  return "language" in value
+  return "language" in value || "segments" in value
 }
 
 function normalizeSegments(response: TranscriptionCreateResponse) {
-  if (isDiarizedResult(response)) {
-    return response.segments.map((segment) =>
-      transcriptSegmentSchema.parse({
-        id: segment.id,
-        startSeconds: segment.start,
-        endSeconds: segment.end,
-        text: segment.text.trim(),
-        speaker: segment.speaker?.trim() || null,
-      })
-    )
-  }
-
   if (isVerboseResult(response) && response.segments?.length) {
-    return response.segments.map((segment, index) =>
-      transcriptSegmentSchema.parse({
-        id: String(segment.id ?? index),
-        startSeconds: segment.start,
-        endSeconds: segment.end,
-        text: segment.text.trim(),
-        speaker: null,
+    return response.segments
+      .map((segment, index) => {
+        const text = segment.text.trim()
+
+        if (!text) {
+          return null
+        }
+
+        return transcriptSegmentSchema.parse({
+          id: String(segment.id ?? index),
+          startSeconds: segment.start,
+          endSeconds: segment.end,
+          text,
+          speaker: null,
+        })
       })
-    )
+      .filter((segment): segment is TranscriptSegment => Boolean(segment))
   }
 
   return []
@@ -65,11 +54,28 @@ function buildReadableTranscript(
   }
 
   return segments
-    .map((segment) => {
-      const speakerPrefix = segment.speaker ? `${segment.speaker}: ` : ""
-      return `[${new Date(segment.startSeconds * 1000).toISOString().slice(11, 19)}] ${speakerPrefix}${segment.text}`
-    })
+    .map(
+      (segment) =>
+        `[${new Date(segment.startSeconds * 1000).toISOString().slice(11, 19)}] ${segment.text}`
+    )
     .join("\n")
+}
+
+function buildRawTranscript(
+  response: TranscriptionCreateResponse,
+  segments: TranscriptSegment[]
+) {
+  const directText =
+    typeof response.text === "string" ? response.text.trim() : ""
+
+  if (directText) {
+    return directText
+  }
+
+  return segments
+    .map((segment) => segment.text)
+    .join(" ")
+    .trim()
 }
 
 export async function transcribeMeetingAudio(input: {
@@ -83,31 +89,18 @@ export async function transcribeMeetingAudio(input: {
     type: input.mimeType,
   })
 
-  const response = await runOpenAIRequest("transcription", (client) =>
+  const response = await runAIRequest("transcription", (client) =>
     client.audio.transcriptions.create({
       file,
       model,
       language: input.language !== "auto" ? input.language : undefined,
-      response_format:
-        model === "gpt-4o-transcribe-diarize"
-          ? "diarized_json"
-          : "verbose_json",
-      chunking_strategy:
-        model === "gpt-4o-transcribe-diarize" ? "auto" : undefined,
-      timestamp_granularities:
-        model === "gpt-4o-transcribe-diarize" ? undefined : ["segment"],
+      response_format: "verbose_json",
+      timestamp_granularities: ["segment"],
     })
   )
 
-  const rawText = response.text.trim()
-
-  if (!rawText) {
-    throw new Error(
-      "The audio could not be transcribed into usable speech. Check that the recording is intelligible and contains spoken audio."
-    )
-  }
-
   const segments = normalizeSegments(response)
+  const rawText = buildRawTranscript(response, segments)
   const readableTranscript = buildReadableTranscript(segments, rawText)
   const durationSeconds =
     "duration" in response && typeof response.duration === "number"
