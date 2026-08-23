@@ -1,5 +1,6 @@
 import { clearAuthCookiesAtScopes, createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
+import { NextRequest, NextResponse } from "next/server"
 
 import { getPublicEnv } from "@/lib/env"
 import type { Database } from "@/types/database"
@@ -24,6 +25,44 @@ function createSupabaseCookieAdapter(cookieStore: CookieStore) {
       })
     },
   }
+}
+
+export type RouteHandlerSupabaseClient = ReturnType<
+  typeof createServerClient<Database>
+>
+
+export function createRouteHandlerSupabaseClient(
+  request: NextRequest,
+  response: NextResponse
+) {
+  const env = getPublicEnv()
+
+  if (!env.NEXT_PUBLIC_SUPABASE_URL || !env.supabasePublicKey) {
+    throw new Error("Supabase public environment variables are not configured.")
+  }
+
+  return createServerClient<Database>(
+    env.NEXT_PUBLIC_SUPABASE_URL,
+    env.supabasePublicKey,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll()
+        },
+        setAll(cookiesToSet, headers) {
+          cookiesToSet.forEach(({ name, value }) => {
+            request.cookies.set(name, value)
+          })
+          cookiesToSet.forEach(({ name, value, options }) => {
+            response.cookies.set(name, value, options)
+          })
+          Object.entries(headers).forEach(([key, value]) => {
+            response.headers.set(key, value)
+          })
+        },
+      },
+    }
+  )
 }
 
 export async function createServerSupabaseClient() {

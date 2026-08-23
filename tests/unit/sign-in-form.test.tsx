@@ -86,7 +86,7 @@ describe("sign in form", () => {
       expect(mocks.signInWithOtp).toHaveBeenCalledWith({
         email: "agent@example.com",
         options: {
-          emailRedirectTo: "http://127.0.0.1:3000/auth/callback?next=/app",
+          emailRedirectTo: "http://localhost:3000/auth/callback?next=/app",
         },
       })
     })
@@ -105,7 +105,7 @@ describe("sign in form", () => {
 
     expect(
       await screen.findByText(
-        /check your email for the sign-in link, then open it in this same browser on 127\.0\.0\.1:3000\./i
+        /check your email for the sign-in link, then open it in this same browser on localhost:3000\./i
       )
     ).toBeVisible()
   })

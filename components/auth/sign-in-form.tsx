@@ -1,7 +1,8 @@
-"use client"
+"use client";
 
 import { useRef, useState } from "react"
 
+import { getCanonicalAppUrl } from "@/lib/http/app-url"
 import { createBrowserSupabaseClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -87,7 +88,7 @@ export function SignInForm({ disabled }: { disabled: boolean }) {
       const { error } = await supabase.auth.signInWithOtp({
         email: normalizedEmail,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback?next=/app`,
+          emailRedirectTo: getCanonicalAppUrl("/auth/callback?next=/app"),
         },
       })
 
@@ -102,7 +103,7 @@ export function SignInForm({ disabled }: { disabled: boolean }) {
       setStatus({
         type: "success",
         message:
-          "Check your email for the sign-in link, then open it in this same browser on 127.0.0.1:3000.",
+          "Check your email for the sign-in link, then open it in this same browser on localhost:3000.",
       })
     } catch (error) {
       setStatus({
@@ -118,43 +119,49 @@ export function SignInForm({ disabled }: { disabled: boolean }) {
   const isInteractionDisabled = disabled || pending
 
   return (
-    <form className="mt-8 space-y-4" noValidate onSubmit={handleSubmit}>
-      <div>
-        <label className="mb-2 block text-sm font-medium" htmlFor="email">
-          Work email
-        </label>
-        <Input
-          id="email"
-          type="email"
-          autoComplete="email"
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          placeholder={`team@${appConfig.name.toLowerCase()}.ai`}
+    <form onSubmit={handleSubmit}>
+      <div className="mt-8 space-y-4">
+        <div>
+          <label className="mb-2 block text-sm font-medium" htmlFor="email">
+            Work email
+          </label>
+          <Input
+            id="email"
+            type="email"
+            autoComplete="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            placeholder={`team@${appConfig.name.toLowerCase()}.ai`}
+            disabled={isInteractionDisabled}
+            inputMode="email"
+            required
+          />
+        </div>
+        <Button
+          className="w-full"
+          type="submit"
           disabled={isInteractionDisabled}
-          inputMode="email"
-          required
-        />
+        >
+          {pending ? "Sending sign-in link..." : "Continue with email"}
+        </Button>
+        <p
+          aria-live={status?.type === "error" ? "assertive" : "polite"}
+          className={
+            status
+              ? status.type === "error"
+                ? "text-sm text-destructive"
+                : "text-sm text-emerald-700"
+              : "sr-only"
+          }
+          role="status"
+        >
+          {status?.message ?? " "}
+        </p>
+        <p className="text-xs text-muted-foreground">
+          Supabase email sign-in sends a magic link to your inbox. Open the
+          link in this same browser on localhost:3000.
+        </p>
       </div>
-      <Button className="w-full" type="submit" disabled={isInteractionDisabled}>
-        {pending ? "Sending sign-in link..." : "Continue with email"}
-      </Button>
-      <p
-        aria-live={status?.type === "error" ? "assertive" : "polite"}
-        className={
-          status
-            ? status.type === "error"
-              ? "text-sm text-destructive"
-              : "text-sm text-emerald-700"
-            : "sr-only"
-        }
-        role="status"
-      >
-        {status?.message ?? " "}
-      </p>
-      <p className="text-xs text-muted-foreground">
-        Supabase email sign-in sends a magic link to your inbox. Open the link
-        in this same browser on 127.0.0.1:3000.
-      </p>
     </form>
   )
 }
