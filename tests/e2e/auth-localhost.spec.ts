@@ -14,7 +14,7 @@ function createAdminClient() {
   })
 }
 
-test.describe("localhost magic-link auth", () => {
+test.describe("localhost email OTP auth", () => {
   test.skip(
     process.env.RUN_LIVE_E2E !== "1",
     "RUN_LIVE_E2E=1 is required for live localhost auth coverage."
@@ -41,21 +41,15 @@ test.describe("localhost magic-link auth", () => {
       await expect(page).toHaveURL("http://localhost:3000/sign-in")
 
       await page.getByLabel("Work email").fill(email)
-      await page.getByRole("button", { name: "Continue with email" }).click()
+      await page.getByRole("button", { name: "Send sign-in code" }).click()
 
       await expect(page).toHaveURL("http://localhost:3000/sign-in")
-      await expect(
-        page.getByText(
-          /check your email for the sign-in link, then open it in this same browser on localhost:3000\./i
-        )
-      ).toBeVisible()
+      await expect(page.getByText("Enter your sign-in code")).toBeVisible()
+      await expect(page.getByText(email)).toBeVisible()
 
       const { data, error } = await admin.auth.admin.generateLink({
         type: "magiclink",
         email,
-        options: {
-          redirectTo: "http://localhost:3000/auth/callback?next=/app",
-        },
       })
 
       if (error) {
@@ -64,15 +58,13 @@ test.describe("localhost magic-link auth", () => {
 
       userId = data.user?.id ?? null
 
-      await page.goto(data.properties.action_link)
+      await page.getByLabel("One-time code").fill(data.properties.email_otp)
+      await page.getByRole("button", { name: "Verify and sign in" }).click()
+
       await expect(page).toHaveURL("http://localhost:3000/app")
       await expect(page.getByText(email)).toBeVisible()
-      await expect(
-        page.getByRole("link", { name: "Dashboard" })
-      ).toBeVisible()
-      await expect(
-        page.getByRole("button", { name: "Sign out" })
-      ).toBeVisible()
+      await expect(page.getByRole("link", { name: "Dashboard" })).toBeVisible()
+      await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible()
 
       await page.reload()
       await expect(page).toHaveURL("http://localhost:3000/app")

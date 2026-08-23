@@ -11,43 +11,15 @@ vi.mock("@/lib/supabase/middleware", () => ({
 
 import { config, proxy } from "@/proxy"
 
-describe("proxy auth bypass and canonical host redirects", () => {
+describe("proxy auth bypass and session delegation", () => {
   beforeEach(() => {
     mocks.updateSession.mockReset()
     mocks.updateSession.mockResolvedValue(new Response(null, { status: 200 }))
   })
 
-  it("redirects 127.0.0.1 document requests to localhost", async () => {
-    const response = await proxy(
-      new NextRequest("http://127.0.0.1:3000/sign-in", {
-        headers: {
-          accept: "text/html",
-          host: "127.0.0.1:3000",
-        },
-      })
-    )
-
-    expect(response.headers.get("location")).toBe("http://localhost:3000/sign-in")
-    expect(mocks.updateSession).not.toHaveBeenCalled()
-  })
-
-  it("does not redirect non-document requests on 127.0.0.1", async () => {
+  it("lets /sign-in load normally without hostname redirects", async () => {
     await proxy(
       new NextRequest("http://127.0.0.1:3000/sign-in", {
-        headers: {
-          accept: "application/json",
-          host: "127.0.0.1:3000",
-          "sec-fetch-dest": "empty",
-        },
-      })
-    )
-
-    expect(mocks.updateSession).toHaveBeenCalledTimes(1)
-  })
-
-  it("does not redirect the callback exchange host handling", async () => {
-    await proxy(
-      new NextRequest("http://127.0.0.1:3000/auth/callback?code=123", {
         headers: {
           accept: "text/html",
           host: "127.0.0.1:3000",

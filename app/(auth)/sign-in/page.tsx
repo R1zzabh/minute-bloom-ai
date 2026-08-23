@@ -17,8 +17,9 @@ type SignInPageProps = {
 const SIGN_IN_ERROR_MESSAGES: Record<string, string> = {
   auth_unavailable: "Authentication is temporarily unavailable.",
   callback_client_error: "Authentication could not start on this device.",
-  exchange_failed: "The sign-in link could not be completed. Request a new link.",
-  missing_code: "The sign-in link was incomplete. Request a new link.",
+  exchange_failed:
+    "Authentication could not be completed. Try signing in again.",
+  missing_code: "Authentication was incomplete. Try signing in again.",
 }
 
 function getSignInStatusMessage(params: {
@@ -42,7 +43,7 @@ function getSignInStatusMessage(params: {
     tone: "error" as const,
     message:
       SIGN_IN_ERROR_MESSAGES[errorCode] ??
-      "The sign-in link could not be completed. Request a new link.",
+      "Authentication could not be completed. Try signing in again.",
   }
 }
 
@@ -70,7 +71,7 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
               Sign in to store meeting notes privately
             </h1>
             <p className="text-sm leading-7 text-muted-foreground">
-              MinuteBloom uses Supabase email authentication to keep private
+              MinuteBloom uses Supabase email OTP authentication to keep private
               uploads, transcripts, and action items scoped to your account.
             </p>
           </div>

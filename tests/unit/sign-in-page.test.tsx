@@ -32,7 +32,10 @@ vi.mock("@/components/shared/logo", () => ({
 }))
 
 vi.mock("@/components/ui/card", () => ({
-  Card: ({ children, className }: PropsWithChildren<{ className?: string }>) => (
+  Card: ({
+    children,
+    className,
+  }: PropsWithChildren<{ className?: string }>) => (
     <div className={className}>{children}</div>
   ),
 }))
@@ -67,7 +70,7 @@ describe("sign in page", () => {
 
     expect(
       screen.getByText(
-        "The sign-in link could not be completed. Request a new link."
+        "Authentication could not be completed. Try signing in again."
       )
     ).toBeVisible()
   })

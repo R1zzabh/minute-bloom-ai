@@ -25,13 +25,13 @@ describe("auth callback route", () => {
     mocks.exchangeCodeForSession.mockResolvedValue({ error: null })
     mocks.createRouteHandlerSupabaseClient.mockImplementation(
       (_request, response) => {
-      response.cookies.set("sb-test-auth-token", "session", { path: "/" })
+        response.cookies.set("sb-test-auth-token", "session", { path: "/" })
 
-      return {
-        auth: {
-          exchangeCodeForSession: mocks.exchangeCodeForSession,
-        },
-      }
+        return {
+          auth: {
+            exchangeCodeForSession: mocks.exchangeCodeForSession,
+          },
+        }
       }
     )
   })
@@ -56,20 +56,21 @@ describe("auth callback route", () => {
     )
   })
 
-  it("redirects alias-host callbacks to canonical localhost before exchange", async () => {
+  it("does not redirect between localhost aliases before exchanging the code", async () => {
     const response = await GET(
-      new NextRequest("http://localhost:3000/auth/callback?code=123&next=%2Fapp", {
-        headers: {
-          host: "127.0.0.1:3000",
-        },
-      })
+      new NextRequest(
+        "http://127.0.0.1:3000/auth/callback?code=123&next=%2Fapp",
+        {
+          headers: {
+            host: "127.0.0.1:3000",
+          },
+        }
+      )
     )
 
-    expect(mocks.createRouteHandlerSupabaseClient).not.toHaveBeenCalled()
-    expect(mocks.exchangeCodeForSession).not.toHaveBeenCalled()
-    expect(response.headers.get("location")).toBe(
-      "http://localhost:3000/auth/callback?code=123&next=%2Fapp"
-    )
+    expect(mocks.createRouteHandlerSupabaseClient).toHaveBeenCalledTimes(1)
+    expect(mocks.exchangeCodeForSession).toHaveBeenCalledWith("123")
+    expect(response.headers.get("location")).toBe("http://localhost:3000/app")
   })
 
   it("falls back to /app for unsafe redirects", async () => {
@@ -79,9 +80,7 @@ describe("auth callback route", () => {
       )
     )
 
-    expect(response.headers.get("location")).toBe(
-      "http://localhost:3000/app"
-    )
+    expect(response.headers.get("location")).toBe("http://localhost:3000/app")
   })
 
   it("returns a safe visible error when the exchange fails", async () => {
@@ -90,7 +89,9 @@ describe("auth callback route", () => {
     })
 
     const response = await GET(
-      new NextRequest("http://localhost:3000/auth/callback?code=123&next=%2Fapp")
+      new NextRequest(
+        "http://localhost:3000/auth/callback?code=123&next=%2Fapp"
+      )
     )
 
     expect(response.headers.get("location")).toBe(
